@@ -106,6 +106,29 @@ def read_window_means(
     return out
 
 
+def clean_overview(data: np.ndarray, fill_below: float = -1.0) -> np.ndarray:
+    """Clean a rainfall array read from COG overviews.
+
+    Overview resampling leaves small negative values (about -0.04 mm) in dry areas and
+    spreads the -9999 ocean fill into large negatives along coasts. Values below
+    ``fill_below`` become NaN; the remaining negatives are set to 0.
+
+    Parameters
+    ----------
+    data : numpy.ndarray
+        Rainfall in mm read from overviews.
+    fill_below : float, default -1.0
+        Threshold (mm) under which a value is treated as fill.
+
+    Returns
+    -------
+    numpy.ndarray
+        float32 array, NaN where fill.
+    """
+    arr = np.asarray(data, dtype="float32")
+    return np.where(arr >= fill_below, np.clip(arr, 0, None), np.nan).astype("float32")
+
+
 def month_list(first_year: int, last_year: int) -> list[tuple[int, int]]:
     """All ``(year, month)`` pairs from January of ``first_year`` to December of ``last_year``."""
     if last_year < first_year:
@@ -171,18 +194,24 @@ def monthly_series(
     months = month_list(first_year, last_year)
     template = templates[source]
 
-    def fetch(ym: tuple[int, int]) -> list[dict[str, Any]]:
-        year, month = ym
-        url = template.format(year=year, month=month)
+    def fetch(ym: tuple[int, int]) -> dict[str, float] | None:
+        url = template.format(year=ym[0], month=ym[1])
         try:
-            means = read_window_means(url, params["bboxes"], nodata_below)
+            return read_window_means(url, params["bboxes"], nodata_below)
         except Exception as exc:  # noqa: BLE001 - one bad month must not stop the rest
             logger.warning("Could not read %s: %s", url, exc)
-            means = dict.fromkeys(params["bboxes"], float("nan"))
-        return [{"aoi_id": k, "year": year, "month": month, "value": v} for k, v in means.items()]
+            return None
 
     with ThreadPoolExecutor(max_workers=max_workers) as pool:
-        rows = [row for batch in pool.map(fetch, months) for row in batch]
+        results = dict(zip(months, pool.map(fetch, months), strict=True))
+    # Retry failed files once, one at a time, so a transient network error is not cached.
+    for ym in [ym for ym, means in results.items() if means is None]:
+        results[ym] = fetch(ym)
+
+    rows = []
+    for (year, month), means in results.items():
+        means = means if means is not None else dict.fromkeys(params["bboxes"], float("nan"))
+        rows += [{"aoi_id": k, "year": year, "month": month, "value": v} for k, v in means.items()]
     df = pd.DataFrame(rows).sort_values(["aoi_id", "year", "month"]).reset_index(drop=True)
     n_missing = int(df["value"].isna().sum())
     save_json_with_sidecar(
@@ -233,13 +262,13 @@ def rainfall_overview(
     from desertification.config import get_path
 
     template = cfg["climate_data"]["chirps_monthly_url"]
-    nodata_below = cfg["climate_data"]["nodata_below"]
     params = {
         "source": "chirps_overview",
         "url_template": template,
         "bounds": list(map(float, bounds)),
         "years": [first_year, last_year],
         "decimation": decimation,
+        "cleaning": "clean_overview(fill_below=-1)",
     }
     path = get_path(cfg, "aux_cache") / "chirps" / f"overview_{first_year}_{last_year}.npz"
     if cached_file_valid(path, params):
@@ -256,7 +285,7 @@ def rainfall_overview(
             data = ds.read(1, window=Window(c0, r0, c1 - c0, r1 - r0), out_shape=shape)
             left, top = ds.transform @ (c0, r0)
             right, bottom = ds.transform @ (c1, r1)
-        data = np.where(data >= nodata_below, data, np.nan).astype("float32")
+        data = clean_overview(data)
         return data, [left, right, bottom, top]
 
     with ThreadPoolExecutor(max_workers=8) as pool:

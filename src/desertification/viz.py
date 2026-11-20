@@ -80,7 +80,8 @@ def plot_aoi_map(
     extent : [lon_min, lon_max, lat_min, lat_max]
         Image extent in degrees.
     aois : list of dict
-        Each with ``aoi_id``, ``name``, ``lon``, ``lat``.
+        Each with ``aoi_id``, ``name``, ``lon``, ``lat``; optional ``label_dx``/``label_dy``
+        (points) and ``label_ha`` move a label away from neighbours or the plot edge.
     years_label : str
         E.g. ``"2019–2025"``, used in the title and source note.
     out_path : Path, optional
@@ -117,10 +118,11 @@ def plot_aoi_map(
         ax.annotate(
             aoi["name"],
             (aoi["lon"], aoi["lat"]),
-            xytext=(6, 6),
+            xytext=(aoi.get("label_dx", 6), aoi.get("label_dy", 6)),
             textcoords="offset points",
             fontsize=8,
             color=INK,
+            ha=aoi.get("label_ha", "left"),
             bbox={"boxstyle": "round,pad=0.2", "fc": SURFACE, "ec": "none", "alpha": 0.85},
         )
     ax.set_xlabel("Longitude (°)")

@@ -295,3 +295,43 @@ def test_season_window():
     assert season_window([1, 2], 2024) == ("2024-01-01", "2024-02-29")
     with pytest.raises(ValueError):
         season_window([], 2023)
+
+
+def test_monthly_series_retries_a_failed_file_once(cfg, monkeypatch):
+    calls = []
+
+    def flaky_read(url, bboxes, nodata_below):
+        calls.append(url)
+        if url.endswith("2020.07.cog") and calls.count(url) == 1:
+            raise OSError("transient network error")
+        return dict.fromkeys(bboxes, 7.0)
+
+    monkeypatch.setattr(aux_data, "read_window_means", flaky_read)
+    df = monthly_series(
+        cfg, "chirps", {"a": [0.0, 0.0, 0.2, 0.2]}, 2020, 2020, allow_download=True, max_workers=2
+    )
+    assert not df["value"].isna().any()
+    assert len(calls) == 13  # 12 months + 1 retry
+
+
+def test_monthly_series_keeps_nan_when_retry_also_fails(cfg, monkeypatch):
+    def broken_read(url, bboxes, nodata_below):
+        if url.endswith("2020.03.cog"):
+            raise OSError("file missing")
+        return dict.fromkeys(bboxes, 1.0)
+
+    monkeypatch.setattr(aux_data, "read_window_means", broken_read)
+    df = monthly_series(
+        cfg, "chirps", {"a": [0.0, 0.0, 0.2, 0.2]}, 2020, 2020, allow_download=True, max_workers=2
+    )
+    assert df["value"].isna().sum() == 1
+    assert df.loc[df["value"].isna(), "month"].item() == 3
+
+
+def test_clean_overview():
+    from desertification.aux_data import clean_overview
+
+    out = clean_overview(np.array([-9999.0, -4000.0, -0.04, 0.0, 12.5]))
+    assert np.isnan(out[0]) and np.isnan(out[1])
+    assert out[2] == 0.0 and out[3] == 0.0 and out[4] == pytest.approx(12.5)
+    assert out.dtype == np.float32
