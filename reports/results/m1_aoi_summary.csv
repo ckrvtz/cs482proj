@@ -1,7 +1,7 @@
 aoi_id,include,role,aridity_index,aridity_class,dryland_or_control,min_usable_dates_per_year,availability_ok,wet_season_months,dry_season_months
-aral,True,degrading,0.144,dryland,True,,,"[12, 1, 2, 3]","[6, 7, 8, 9]"
+aral,True,degrading,0.143,dryland,True,,,"[12, 1, 2, 3]","[6, 7, 8, 9]"
 ferlo,True,mixed,0.171,dryland,True,,,"[7, 8, 9, 10]","[1, 2, 3, 4]"
-fakara,True,mixed,0.22,dryland,True,,,"[6, 7, 8, 9]","[11, 12, 1, 2]"
-kubuqi,True,improving_control,0.235,dryland,True,,,"[6, 7, 8, 9]","[11, 12, 1, 2]"
+fakara,True,mixed,0.219,dryland,True,,,"[6, 7, 8, 9]","[11, 12, 1, 2]"
+kubuqi,True,improving_control,0.236,dryland,True,,,"[6, 7, 8, 9]","[11, 12, 1, 2]"
 urmia,True,degrading,0.192,dryland,True,,,"[2, 3, 4, 5]","[6, 7, 8, 9]"
 erg,True,stable_control,0.043,hyper-arid,True,,,"[1, 2, 3, 4]","[5, 6, 7, 8]"

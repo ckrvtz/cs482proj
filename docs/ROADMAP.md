@@ -714,7 +714,7 @@ Fill in owners and due dates. Tick tasks as they finish (`[x]`, date, note). `[~
 | [x] | P0-T02 | Environment & dependencies | | 2026-11-20 | Pinned Python 3.12 env; verified in a fresh cloud venv (CPU) and on the local machine with the GTX 1080 Ti: all imports OK, GPU matmul OK, 15/15 tests pass (Decision log #17) |
 | [x] | P0-T03 | CDSE credentials & connectivity | | 2026-11-20 | Local run: Catalog search over `ferlo_test`, Jan 2023 returned 6 scenes (tile 28PEC; cloud cover 0–98.7%, median 37.2%; 2 scenes < 10%). Ledger updated; 0 PU and 1 request charged |
 | [x] | M1-T01 | Document candidate sources | | 2026-11-20 | `reports/milestone1/sources.md`: both sources and the auxiliary datasets documented from official docs (links, quotes, access date), with the project owner's personal-motivation paragraph; builds to PDF with no warnings. Aridity-index facts left `[VERIFY]` for M1-T02 |
-| [ ] | M1-T02 | Select & validate AOIs | | | |
+| [~] | M1-T02 | Select & validate AOIs | | 2026-11-20 | Tooling, candidates, climate evidence (aridity, seasons), map and `config/aois.geojson` done; 70 tests. **Pending: local run of the Catalog availability + true-colour sections (needs credentials and approval: ≥42 Catalog requests, 0 PU; 12 Process requests, ~5 PU), then the owner's final AOI choice** |
 | [ ] | M1-T03 | Feasibility & scale | | | |
 | [ ] | M1-T04 | Instructor discussion | | | Deferred, non-blocking |
 | [ ] | M1-T05 | Pilot extraction | | | |
@@ -763,6 +763,8 @@ Resolve these and record the answer in [`DECISIONS.md`](DECISIONS.md).
 7. Global Aridity Index: version (v3?), resolution, licence and citation could not be read (figshare blocked automated access). *Verify in M1-T02 before use.*
 8. Trends.Earth licence: README says GPL v2.0 or later, but the repository also contains an Apache-2.0 file. *Verify before citing (only if used).*
 9. *(Resolved 2026-11-20: personal-motivation paragraph added by the project owner.)*
+10. **M1-T02 API checks:** run sections 4–5 of `notebooks/01b_aoi_selection.ipynb` locally with `ALLOW_API_CALLS = True`: about 42–80 Catalog requests (0 PU) and 12 Process requests (~5 PU, ~0.42 PU each). *Owner: project owner (approval + local run).*
+11. **Final AOI choice:** after the checks, decide which candidates to keep (`include` in `config/aoi_candidates.yaml`). Known issues: the Lake Urmia centre is on the lake itself (may need moving to the shore/farmland); the erg location was picked from general knowledge and needs the imagery check. *Owner: project owner.*
 
 ---
 

@@ -76,6 +76,27 @@ As climate change continues to accelerate and ravage our natural world, I believ
 3. **DEM from Planetary Computer.** Use `cop-dem-glo-30` from Planetary Computer, since COPERNICUS_30 on CDSE needs authorised access.
 4. **CHIRPS v3, not v2.** v2 production ends after December 2026; v3 also covers 60°N–60°S, enough for every candidate study area.
 
+## 7. Study areas (M1-T02)
+
+*Preliminary: climate evidence is complete; Sentinel-2 availability and the true-colour check run locally with API credentials (see ROADMAP §12). Final AOI choice is the project owner's.*
+
+Six candidate areas of about 20 km × 20 km each cover the dynamics we want to separate: degradation (Aral Sea, Lake Urmia), mixed rainfall- and land-use-driven change (two Sahel sites), re-greening (Kubuqi) and a stable hyper-arid control (an erg in the Sahara) (`reports/figures/m1_aoi_map.png`). Each AOI is a square in the UTM zone of its centre with edges on the 100 m cell grid; geometry and properties are in `config/aois.geojson`.
+
+**Aridity.** Following the UNCCD definition (annual precipitation ÷ potential evapotranspiration between 0.05 and 0.65), the aridity index is mean annual CHIRPS v3 rainfall divided by mean annual Hobbins reference evapotranspiration, 1991–2020. Five candidates are drylands (0.14–0.24, arid to semi-arid); the erg is hyper-arid (0.043) and is kept deliberately as a stable control.
+
+**Seasons.** The wet season is the wettest four consecutive months of the 1991–2020 rainfall climatology and the dry season the driest four (`reports/figures/m1_aoi_climatology.png`). The Sahel sites are strongly seasonal (92–93 % of rain in the wet season), Kubuqi has summer monsoon rain (76 %), and the Aral Sea and Lake Urmia receive winter–spring rain. At the erg, rain is too scarce for seasons to matter.
+
+| AOI | Role | Rainfall (mm/yr) | Ref. ET (mm/yr) | Aridity index | Class | Wet season (share of rain) | Dry season | Usable S-2 dates/yr (min) |
+|---|---|---|---|---|---|---|---|---|
+| Aral Sea / Aralkum (UZ/KZ) | degrading | 185 | 1288 | 0.143 | dryland | Dec–Mar (45 %) | Jun–Sep | pending |
+| Ferlo, Senegal | mixed | 438 | 2565 | 0.171 | dryland | Jul–Oct (92 %) | Jan–Apr | pending |
+| Fakara / Tillabéri, Niger | mixed | 510 | 2323 | 0.219 | dryland | Jun–Sep (93 %) | Nov–Feb | pending |
+| Kubuqi Desert, Inner Mongolia | improving control | 292 | 1239 | 0.236 | dryland | Jun–Sep (76 %) | Nov–Feb | pending |
+| Lake Urmia basin, Iran | degrading | 269 | 1404 | 0.192 | dryland | Feb–May (54 %) | Jun–Sep | pending |
+| Grand Erg Occidental, Algeria | stable control | 92 | 2151 | 0.043 | hyper-arid | Jan–Apr (46 %) | May–Aug | pending |
+
+Source: `reports/results/m1_aoi_climate.csv` (notebook `notebooks/01b_aoi_selection.ipynb`). Rainfall: CHIRPS v3; reference ET: Hobbins ETo (Climate Hazards Center).
+
 ## Sources consulted (accessed 2026-11-20)
 
 - CDSE documentation: [Sentinel Hub](https://documentation.dataspace.copernicus.eu/APIs/SentinelHub.html) · [Quotas and Limitations](https://documentation.dataspace.copernicus.eu/Quotas.html) · [Processing Unit](https://documentation.dataspace.copernicus.eu/APIs/SentinelHub/Overview/ProcessingUnit.html) · [Authentication](https://documentation.dataspace.copernicus.eu/APIs/SentinelHub/Overview/Authentication.html) · [Process API](https://documentation.dataspace.copernicus.eu/APIs/SentinelHub/Process.html) · [Process API S2L2A examples](https://documentation.dataspace.copernicus.eu/APIs/SentinelHub/Process/Examples/S2L2A.html) · [Catalog API](https://documentation.dataspace.copernicus.eu/APIs/SentinelHub/Catalog.html) · [Statistical API](https://documentation.dataspace.copernicus.eu/APIs/SentinelHub/Statistical.html) · [Sentinel-2 L2A collection](https://documentation.dataspace.copernicus.eu/APIs/SentinelHub/Data/S2L2A.html) · [Sentinel-2 mission](https://documentation.dataspace.copernicus.eu/Data/SentinelMissions/Sentinel2.html) · [DEM](https://documentation.dataspace.copernicus.eu/APIs/SentinelHub/Data/DEM.html)

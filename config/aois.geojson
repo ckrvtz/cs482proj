@@ -28,7 +28,7 @@
           45.092916
         ],
         "notes": null,
-        "aridity_index": 0.144,
+        "aridity_index": 0.143,
         "aridity_class": "dryland",
         "aridity_source": "CHIRPS v3 / Hobbins ETo, 1991-2020",
         "wet_season_months": [
@@ -168,7 +168,7 @@
           13.590867
         ],
         "notes": null,
-        "aridity_index": 0.22,
+        "aridity_index": 0.219,
         "aridity_class": "dryland",
         "aridity_source": "CHIRPS v3 / Hobbins ETo, 1991-2020",
         "wet_season_months": [
@@ -238,7 +238,7 @@
           40.292912
         ],
         "notes": null,
-        "aridity_index": 0.235,
+        "aridity_index": 0.236,
         "aridity_class": "dryland",
         "aridity_source": "CHIRPS v3 / Hobbins ETo, 1991-2020",
         "wet_season_months": [
