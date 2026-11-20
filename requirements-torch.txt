@@ -1,0 +1,11 @@
+# PyTorch for the local NVIDIA GTX 1080 Ti (Pascal, compute capability 6.1) (P0-T02).
+#
+# Why this exact build: the CUDA 12.6 wheels still ship Pascal kernels; we checked that
+# libtorch_cuda.so in torch 2.14.1+cu126 is compiled for sm_50, sm_60, sm_70, sm_75, sm_80,
+# sm_86 and sm_90. sm_60 code runs on sm_61 cards (same major version), so
+# torch.cuda.get_arch_list() will list "sm_60", not "sm_61". The CUDA 13.0 builds are not
+# guaranteed to support Pascal, so do NOT switch to them, or to the plain PyPI torch
+# wheel, without re-running scripts/check_gpu.py. Wheels exist for Linux x86_64 and
+# Windows x86_64 (Python 3.12). The +cu126 build also runs on CPU-only machines.
+--extra-index-url https://download.pytorch.org/whl/cu126
+torch==2.14.1+cu126

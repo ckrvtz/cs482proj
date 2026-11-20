@@ -421,7 +421,7 @@ M1 wk1 | Depends on: — | Owner: TBD
 M1 wk1 | Depends on: P0-T01
 **Goal:** a pinned, reproducible environment on the **local machine with an NVIDIA GTX 1080 Ti** (Pascal, compute capability 6.1, 11 GB VRAM). Colab is an optional fallback only.
 **Outputs:** `environment.yml` (and/or `requirements.txt`) with pinned versions; GPU setup notes in README; `scripts/build_pdf.sh` (Markdown → PDF with pandoc, see M1-T10).
-**GPU note:** recent PyTorch/CUDA builds have been dropping older GPU architectures. Pick a PyTorch + CUDA combination whose `torch.cuda.get_arch_list()` includes `sm_61`, and check it actually runs a tensor operation on the GPU. Don't assume the latest wheel works. Record the working combination in the Decision Log.
+**GPU note:** recent PyTorch/CUDA builds have been dropping older GPU architectures. Pick a PyTorch + CUDA combination whose `torch.cuda.get_arch_list()` covers compute capability 6.1 (`sm_60` or `sm_61` kernels, or older-or-equal `compute_6x` PTX), and check it actually runs a tensor operation on the GPU. Don't assume the latest wheel works. Record the working combination in the Decision Log.
 **Report tooling:** `pandoc` plus a PDF engine (e.g. `xelatex` from TeX Live). Record the versions.
 **Core packages:** `sentinelhub`, `numpy`, `pandas`, `pyarrow`, `xarray`, `rioxarray`, `rasterio`, `geopandas`, `shapely`, `pyproj`, `scipy`, `statsmodels`, `pymannkendall`, `scikit-learn`, `imbalanced-learn`, `lightgbm` (or `xgboost`), `torch`, `shap`, `optuna` (optional), `matplotlib`, `seaborn`, `folium` or `leafmap`, `pystac-client`, `planetary-computer`, `python-dotenv`, `pyyaml`, `tqdm`, `jupyter`, `nbconvert`, `papermill`, `pytest`, `ruff`.
 **Acceptance:** env builds from scratch · `python -c "import sentinelhub, sklearn, torch, geopandas"` works · `torch.cuda.is_available()` is `True` and a small matrix multiply runs on the 1080 Ti · `scripts/build_pdf.sh` turns a test Markdown file with a figure into a PDF · versions recorded in the Decision Log.
@@ -689,19 +689,19 @@ Keys + early-period features (§4.4) + static `cells` attributes. **No** columns
 | Irrigation / cropland dynamics confused with degradation | Label noise | WorldCover cropland masks/features; error analysis by land cover |
 | Notebook not reproducible for the grader | Lost marks | Final notebook committed with outputs; processed data committed (or released if too large); clean-env execution test; pinned env |
 | Local disk loss (raw data only exists locally) | Re-downloads cost quota | Back up `data/raw/` outside the repo after M1-T06; provenance sidecars allow exact re-requests |
-| GTX 1080 Ti not supported by the latest PyTorch build | DL tasks blocked | Pin a build that includes `sm_61` (P0-T02); CPU/Colab fallback |
+| GTX 1080 Ti not supported by the latest PyTorch build | DL tasks blocked | torch pinned to `2.14.1+cu126` (has `sm_60` kernels); `scripts/check_env.py --require-gpu`; automatic CPU fallback via `hardware.select_device()` |
 | LLM-introduced errors (wrong formulas, fabricated APIs/citations) | Silent bugs, academic-integrity problems | Unit tests for formulas; citation verification; CLAUDE.md integrity rules; human review against acceptance criteria |
 
 ---
 
 ## 10. Status tracker
 
-Fill in owners and due dates. Tick tasks as they finish (`[x] YYYY-MM-DD — note`).
+Fill in owners and due dates. Tick tasks as they finish (`[x]`, date, note). `[~]` = done except a step that needs a person or the local machine (see Notes).
 
 | ✓ | ID | Task | Owner | Due | Notes |
 |---|---|---|---|---|---|
 | [x] | P0-T01 | Scaffold repository | | 2026-11-20 | Layout, pyproject, config loader + validation, 9 smoke tests pass in a fresh venv. Teammate walkthrough of README still pending. Module stubs are left to their own tasks |
-| [ ] | P0-T02 | Environment & dependencies | | | |
+| [~] | P0-T02 | Environment & dependencies | | 2026-11-20 | Pinned env built from scratch and verified on CPU (Linux, Python 3.12): imports, `pip check`, 15 tests, PDF build. **GPU check on the 1080 Ti still to run locally** (`python scripts/check_env.py --require-gpu`) |
 | [ ] | P0-T03 | CDSE credentials & connectivity | | | |
 | [ ] | M1-T01 | Document candidate sources | | | |
 | [ ] | M1-T02 | Select & validate AOIs | | | |
@@ -751,6 +751,11 @@ Append-only. Newest at the bottom. Every threshold, AOI bound, library choice, s
 | 9 | 2026-11-20 | `config/project.yaml` holds the roadmap's periods, grid, S2 bands/SCL mask, quota caps, label defaults and paths; global seed = 482. `desertification.config.validate_config` rejects overlapping early/gap/late periods, a cell size that isn't a multiple of the pixel size, and PU caps above the total | Puts the leakage and quota rules in code, not just in docs | P0-T01 | All tasks |
 | 10 | 2026-11-20 | Project root found via `DESERT_PROJECT_ROOT`, else the cwd and its parents, else the package location | Notebooks run from `notebooks/` and tests from the repo root both find the config | P0-T01 | All code |
 | 11 | 2026-11-20 | Only `__init__.py` and `config.py` created in `src/desertification/`; the other modules in §5 are created by the tasks that implement them | Avoids empty placeholder modules | P0-T01 | §5 |
+| 12 | 2026-11-20 | Python 3.12. Pins in `requirements.txt` (top-level packages, exact versions resolved together, `pip check` clean) and `requirements-torch.txt`; `environment.yml` (conda-forge, `python=3.12`) installs the same pip files | One set of pins for conda and venv users | P0-T02 | All |
+| 13 | 2026-11-20 | torch `2.14.1+cu126` from the PyTorch CUDA 12.6 index. Checked by reading `libtorch_cuda.so` from the wheel: compiled for sm_50, sm_60, sm_70, sm_75, sm_80, sm_86, sm_90. sm_60 binaries run on the 1080 Ti (6.1). The cu126 index was the only one with Pascal-era builds up to 2.14.1 (cu128 stops at 2.11.0); cu130 not used | Newest build we could confirm has Pascal kernels | P0-T02 | M3-T10 |
+| 14 | 2026-11-20 | Gradient boosting library: LightGBM (XGBoost not installed unless needed) | One GBM library keeps the env smaller; revisit in M3-T09 if needed | P0-T02 | M3-T09 |
+| 15 | 2026-11-20 | Reports: pandoc 3.1 + XeLaTeX (TeX Live 2023) via `scripts/build_pdf.sh`; tested with a figure, table, math and links. Engine overridable with `PDF_ENGINE` | Standard pandoc route; same on Linux (TeX Live) and Windows (MiKTeX) | P0-T02 | Reports |
+| 16 | 2026-11-20 | Created a personal cloud environment `cs482proj` allowing `download.pytorch.org` and `download-r2.pytorch.org` (PyTorch index and wheel host). `pypi.nvidia.com` stays blocked there; in the cloud sandbox install the `nvidia-*` deps from PyPI first | Needed to find and verify the torch build from cloud sessions; local machine unaffected | P0-T02 | Cloud sessions only |
 
 ---
 
@@ -763,7 +768,7 @@ Resolve these and move the answer to the Decision Log.
 3. Instructor feedback on scope, label strategy and whether weak labels are acceptable. *Deferred (M1-T04).*
 4. Group members for M3 and whether M1/M2 are individual or group submissions. *Deferred (M3-T01).*
 5. Whether `data/processed/` stays under ~50 MB or needs a GitHub Release asset. *Revisit after M1-T08.*
-6. Working PyTorch + CUDA version pair for the GTX 1080 Ti. *Settle in P0-T02.*
+6. Confirm the pinned torch build runs on the GTX 1080 Ti: run `python scripts/check_env.py --require-gpu` locally and record the output, driver version and the max CUDA version from `nvidia-smi` (driver must support CUDA 12.6). *Closes P0-T02.*
 
 ---
 

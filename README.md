@@ -10,24 +10,45 @@ Sentinel-2 L2A imagery, accessed through the Sentinel Hub APIs on the
 
 ## Setup
 
-Requires Python ≥ 3.11 and git. The project runs on a local machine (an NVIDIA GPU is
-used for the deep-learning tasks). The full pinned environment (`environment.yml`,
-including the geospatial and ML stack and GPU notes) is added in task P0-T02. Until
-then, the package skeleton installs like this:
+Tested with **Python 3.12** on Linux x86_64. PyTorch wheels for the pinned build also
+exist for Windows x86_64. The project runs on a local machine; deep-learning tasks use an
+NVIDIA GTX 1080 Ti but everything also runs on CPU.
 
 1. Clone the repository and enter it:
    ```bash
    git clone https://github.com/ckrvtz/cs482proj.git
    cd cs482proj
    ```
-2. Create and activate a virtual environment:
+2. Create the environment, **either** with conda:
    ```bash
-   python3 -m venv .venv
+   conda env create -f environment.yml
+   ```
+   ```bash
+   conda activate desert
+   ```
+   **or** with a plain virtual environment (install in this order):
+   ```bash
+   python3.12 -m venv .venv
+   ```
+   ```bash
    source .venv/bin/activate        # Windows: .venv\Scripts\activate
    ```
-3. Install the package in editable mode with dev tools:
+   ```bash
+   pip install -r requirements-torch.txt
+   ```
+   ```bash
+   pip install -r requirements.txt
+   ```
    ```bash
    pip install -e ".[dev]"
+   ```
+3. Check the install. On the GPU machine use `--require-gpu`, which also runs a test
+   matrix multiply on the card:
+   ```bash
+   python scripts/check_env.py --require-gpu
+   ```
+   ```bash
+   pytest
    ```
 4. Create your local credentials file and fill in your CDSE OAuth client
    (from the [Sentinel Hub dashboard](https://shapps.dataspace.copernicus.eu/dashboard/)).
@@ -35,10 +56,34 @@ then, the package skeleton installs like this:
    ```bash
    cp .env.example .env
    ```
-5. Check everything works:
-   ```bash
-   pytest
-   ```
+
+### GPU notes (GTX 1080 Ti)
+
+- The 1080 Ti is a Pascal card (compute capability 6.1). Newer PyTorch builds have been
+  dropping Pascal, so torch is pinned to **`2.14.1+cu126`** from the PyTorch CUDA 12.6
+  index (`requirements-torch.txt`). That build ships `sm_60` kernels, which run on 6.1
+  cards, so `torch.cuda.get_arch_list()` shows `sm_60` rather than `sm_61`.
+- It needs an NVIDIA driver that supports CUDA 12.6 (`nvidia-smi` shows the driver's
+  maximum CUDA version in its header). The CUDA toolkit itself comes with the pip wheels.
+- Don't upgrade torch or switch to another CUDA index without re-running
+  `scripts/check_env.py --require-gpu`.
+- Code picks the device with `desertification.hardware.select_device()`, which falls back
+  to CPU when the GPU is missing or unsupported.
+
+### Building report PDFs
+
+Reports are written in Markdown and converted with pandoc:
+```bash
+scripts/build_pdf.sh reports/milestone1/milestone1_report.md
+```
+This needs [pandoc](https://pandoc.org/installing.html) and a LaTeX engine (default
+`xelatex`, from TeX Live on Linux or MiKTeX on Windows). On Debian/Ubuntu:
+```bash
+sudo apt-get install pandoc texlive-xetex texlive-latex-recommended texlive-fonts-recommended lmodern
+```
+Use another engine with `PDF_ENGINE=lualatex scripts/build_pdf.sh ...`. Image paths are
+resolved relative to the report's folder, so `../figures/<name>.png` works.
+On Windows, run the script from Git Bash or WSL.
 
 ## Repository layout
 

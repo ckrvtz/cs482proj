@@ -24,21 +24,23 @@ If a task is ambiguous, or a decision is really the team's to make (AOI choice, 
 
 ## Commands
 
-(These are the intended commands. `P0-T01`/`P0-T02` create the tooling; update this section if it ends up different.)
+(Set up in P0-T01/P0-T02. Python 3.12; pins in `requirements.txt` and `requirements-torch.txt`.)
 
 ```bash
-conda env create -f environment.yml && conda activate desert   # or: pip install -r requirements.txt
+conda env create -f environment.yml && conda activate desert   # or a venv: see README "Setup" (install order matters)
 pip install -e ".[dev]"                                        # install src/desertification + pytest/ruff
 pytest -q                                                      # unit tests
 ruff check src tests && ruff format src tests                  # lint + format
 jupyter nbconvert --to notebook --execute --inplace notebooks/<nb>.ipynb   # run a notebook headless
 scripts/build_pdf.sh reports/milestone1/milestone1_report.md               # Markdown report → PDF (pandoc)
+python scripts/check_env.py [--require-gpu]                               # verify imports, versions, GPU
 ```
 
 ## Compute and storage
 
 - Development runs on a **local machine with an NVIDIA GTX 1080 Ti** (Pascal, sm_61, 11 GB VRAM). Colab is only a fallback.
-- PyTorch code picks the device automatically (`cuda` if available, else `cpu`) and must still run on CPU. Size batches for 11 GB. Don't upgrade PyTorch/CUDA without checking `torch.cuda.get_arch_list()` still includes `sm_61`.
+- PyTorch code gets its device from `desertification.hardware.select_device()` (`cuda` if usable, else `cpu`) and must still run on CPU. Size batches for 11 GB.
+- torch is pinned to `2.14.1+cu126` because that build still has Pascal kernels (`sm_60`, which runs on sm_61 cards; `get_arch_list()` shows `sm_60`, not `sm_61`). Don't change the torch version or CUDA index without re-running `python scripts/check_env.py --require-gpu` on the GPU machine.
 - Imagery stays **local**. `data/raw/` and `data/interim/` are the download cache and the only copy: **never delete or overwrite them without asking**. No commercial cloud storage.
 
 ## Repository layout (summary — full version in ROADMAP §5)

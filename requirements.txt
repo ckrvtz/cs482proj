@@ -1,0 +1,54 @@
+# Pinned project environment (P0-T02). Python 3.12.
+# Install order (see README): requirements-torch.txt first, then this file, then `pip install -e ".[dev]"`.
+# Versions were resolved together and checked with `pip check` on 2026-11-20.
+# Change a pin only deliberately, re-run the checks in README, and log it in docs/ROADMAP.md §11.
+
+# --- Sentinel Hub / CDSE and STAC access ---
+sentinelhub==3.12.1
+pystac-client==0.9.1
+planetary-computer==1.0.0
+
+# --- Core numerics and tables ---
+numpy==2.5.5
+pandas==3.1.1
+pyarrow==26.0.1
+scipy==1.18.1
+
+# --- Geospatial ---
+xarray==2026.9.0
+rioxarray==0.23.0
+rasterio==1.5.2
+geopandas==1.2.0
+shapely==2.2.0
+pyproj==3.8.0
+
+# --- Statistics and trends ---
+statsmodels==0.15.0
+pymannkendall==1.4.3
+
+# --- Machine learning (torch is in requirements-torch.txt) ---
+scikit-learn==1.9.1
+imbalanced-learn==0.14.2
+lightgbm==4.7.0
+shap==0.54.1
+optuna==5.1.0
+
+# --- Visualisation ---
+matplotlib==3.11.2
+seaborn==0.13.2
+folium==1.0.0
+
+# --- Utilities ---
+python-dotenv==1.2.4
+PyYAML==6.0.3
+tqdm==4.70.1
+
+# --- Notebooks ---
+jupyterlab==4.6.6
+ipykernel==7.4.0
+nbconvert==7.17.2
+papermill==2.7.0
+
+# --- Dev tools ---
+pytest==9.2.0
+ruff==0.17.6

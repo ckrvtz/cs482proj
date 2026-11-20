@@ -1,0 +1,14 @@
+# Conda environment for the project (P0-T02). Pins live in the pip requirement files,
+# so conda and plain-venv installs get identical packages.
+#   conda env create -f environment.yml
+#   conda activate desert
+name: desert
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pip
+  - pip:
+      - -r requirements-torch.txt
+      - -r requirements.txt
+      - -e .[dev]
