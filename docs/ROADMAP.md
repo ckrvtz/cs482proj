@@ -219,7 +219,7 @@ S2L2A_CDSE = DataCollection.SENTINEL2_L2A.define_from(
 | **CHIRPS v3** monthly precipitation (0.05°, 60°N–60°S, 1981–present) | Rainfall adjustment for RESTREND; rainfall features | UCSB Climate Hazards Center (`https://data.chc.ucsb.edu/products/CHIRPS/v3.0/`). v3 replaces v2: "Production of CHIRPS v2 will end after December 2026" (Decision log #24) |
 | **Copernicus DEM GLO-30** | Elevation, slope, aspect | **Planetary Computer** `cop-dem-glo-30` (open). On CDSE, COPERNICUS_30 is restricted to authorized user categories and requests default to the 90 m DEM (Decision log #25) |
 | **ESA WorldCover** 10 m (2020, 2021) | Land-cover fractions per cell; masks (water, built-up, cropland); stratification | AWS Open Data (`esa-worldcover` bucket) or Planetary Computer |
-| **Global Aridity Index** (CGIAR-CSI / Trabucco & Zomer) | Confirm AOIs are drylands; feature | Figshare release by the authors |
+| **Aridity index** (P/ETo) | Confirm AOIs are drylands; feature | Computed from CHIRPS v3 rainfall ÷ **Hobbins reference ET** (CHC, monthly 0.05°, `https://data.chc.ucsb.edu/products/Hobbins_RefET/`) over 1991–2020, per the UNCCD Art. 1 definition. The Trabucco & Zomer Global Aridity Index on figshare blocks automated downloads (Decision log #31) |
 | **Trends.Earth / SDG 15.3.1** layers (optional) | External comparison for our degradation labels | Trends.Earth docs / data |
 
 Document licence and citation for each one in `docs/REFERENCES.md` when you first use it.
@@ -254,7 +254,7 @@ Choose **4–6 AOIs**, each about **20 km × 20 km** (so one Process API request
 | Fakara / Tillabéri, Niger (Sahel) | ~13.5, 2.6 | Cropland expansion, fallow loss | Mixed |
 | Kubuqi Desert, Inner Mongolia (CN) | ~40.2, 108.5 | Afforestation / re-greening | Improving (control) |
 | Lake Urmia basin, Iran | ~37.7, 45.3 | Lake shrinkage, salt flats, agricultural pressure | Degrading |
-| Stable hyper-arid erg (e.g. Sahara, Morocco/Algeria) | choose in M1-T02 | Stable bare sand | Stable (control) |
+| Stable hyper-arid erg: Grand Erg Occidental, Algeria | ~30.6, 0.6 (chosen in M1-T02; `[VERIFY]` on imagery) | Stable bare sand | Stable (control) |
 
 Per-AOI config (in `config/aois.geojson` properties or `config/project.yaml`): `aoi_id`, `name`, `bbox_wgs84`, `utm_epsg`, `wet_season_months`, `dry_season_months`, `role`, `aridity_index`, `notes`.
 **Seasons are AOI-specific** (e.g. the Sahel wet season is roughly Jun–Oct). Don't use calendar seasons across AOIs.
@@ -354,6 +354,7 @@ cs482proj/
 ├── .env.example                  # SH_CLIENT_ID=, SH_CLIENT_SECRET= (no real values)
 ├── config/
 │   ├── project.yaml              # periods, cell size, resolution, thresholds, seeds, paths
+│   ├── aoi_candidates.yaml       # candidate AOIs (M1-T02); owner sets include: true/false
 │   └── aois.geojson              # AOI polygons + per-AOI properties
 ├── src/desertification/
 │   ├── __init__.py
@@ -367,6 +368,7 @@ cs482proj/
 │   ├── catalog.py                # scene availability queries
 │   ├── ingest.py                 # Process/Statistical API downloads + caching + provenance
 │   ├── aux_data.py               # CHIRPS, DEM, WorldCover, aridity
+│   ├── aoi.py                    # AOI squares, seasons, aridity, availability (pure)
 │   ├── preprocess.py             # masking, gridding/aggregation, QA
 │   ├── features.py               # indices + temporal features
 │   ├── trends.py                 # Theil–Sen, Mann–Kendall, RESTREND
@@ -377,6 +379,7 @@ cs482proj/
 │   └── viz.py                    # maps and plots (consistent style)
 ├── notebooks/
 │   ├── 01_data_discovery.ipynb
+│   ├── 01b_aoi_selection.ipynb      # M1-T02
 │   ├── 02_ingestion.ipynb
 │   ├── 03_cleaning_eda.ipynb
 │   ├── 04_feature_engineering.ipynb

@@ -1,0 +1,56 @@
+# Candidate AOIs for M1-T02 (ROADMAP §4.1). Centres are approximate starting points;
+# the notebook notebooks/01b_aoi_selection.ipynb builds a ~20 x 20 km UTM square around
+# each one, checks aridity, rainfall seasons, Sentinel-2 availability and imagery, and
+# writes the AOIs marked `include: true` to config/aois.geojson.
+# Choosing which candidates to keep (and moving a centre) is the project owner's decision.
+
+candidates:
+  - aoi_id: aral
+    name: Aral Sea / Aralkum (UZ/KZ)
+    centre_lat: 45.0
+    centre_lon: 60.0
+    role: degrading
+    expected_dynamic: Strong degradation, exposed seabed, salinisation
+    include: true
+
+  - aoi_id: ferlo
+    name: Ferlo, Senegal (Sahel)
+    centre_lat: 15.5
+    centre_lon: -14.5
+    role: mixed
+    expected_dynamic: Grazing pressure, rainfall-driven variability
+    include: true
+
+  - aoi_id: fakara
+    name: Fakara / Tillaberi, Niger (Sahel)
+    centre_lat: 13.5
+    centre_lon: 2.6
+    role: mixed
+    expected_dynamic: Cropland expansion, fallow loss
+    include: true
+
+  - aoi_id: kubuqi
+    name: Kubuqi Desert, Inner Mongolia (CN)
+    centre_lat: 40.2
+    centre_lon: 108.5
+    role: improving_control
+    expected_dynamic: Afforestation / re-greening
+    include: true
+
+  - aoi_id: urmia
+    name: Lake Urmia basin, Iran
+    centre_lat: 37.7
+    centre_lon: 45.3
+    role: degrading
+    expected_dynamic: Lake shrinkage, salt flats, agricultural pressure
+    notes: Centre is on the lake itself; may need moving to the shore/farmland after the imagery check.
+    include: true
+
+  - aoi_id: erg
+    name: Grand Erg Occidental, Algeria (stable erg)
+    centre_lat: 30.6
+    centre_lon: 0.6
+    role: stable_control
+    expected_dynamic: Stable bare sand (hyper-arid control)
+    notes: Location chosen for M1-T02 as a hyper-arid sand-sea control; confirm on the true-colour image.
+    include: true

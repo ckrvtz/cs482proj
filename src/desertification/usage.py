@@ -207,3 +207,44 @@ def check_cap(
     """
     left = caps[category] - pu_used_by_category(rows)[category] - estimate_pu
     return left >= 0, left
+
+
+def estimate_process_pu(
+    width_px: int,
+    height_px: int,
+    n_input_bands: int,
+    n_samples: int = 1,
+    float32: bool = False,
+    statistical: bool = False,
+) -> float:
+    """Estimate the processing units (PU) of one Process/Statistical API request.
+
+    Follows the CDSE rules (https://documentation.dataspace.copernicus.eu/APIs/SentinelHub/Overview/ProcessingUnit.html):
+    1 PU = 512 x 512 px x 3 input bands x 1 data sample, <= 16-bit output. Area factor
+    = px / 512² (minimum 0.01); band factor = bands / 3 (``dataMask`` not counted);
+    × number of data samples per pixel; × 2 for 32-bit float output; minimum 0.005 PU
+    per Process request and 0.01 per Statistical request. Surcharges not covered here.
+
+    Parameters
+    ----------
+    width_px, height_px : int
+        Output size in pixels.
+    n_input_bands : int
+        Input bands requested, excluding ``dataMask``.
+    n_samples : int, default 1
+        Data samples per pixel (acquisitions used by a multi-temporal evalscript).
+    float32 : bool, default False
+        True for 32-bit float output.
+    statistical : bool, default False
+        True for Statistical API requests (higher minimum).
+
+    Returns
+    -------
+    float
+        Estimated PU.
+    """
+    if min(width_px, height_px, n_input_bands, n_samples) < 1:
+        raise ValueError("sizes, bands and samples must be >= 1")
+    area = max(0.01, width_px * height_px / 512**2)
+    pu = area * (n_input_bands / 3) * n_samples * (2 if float32 else 1)
+    return max(pu, 0.01 if statistical else 0.005)

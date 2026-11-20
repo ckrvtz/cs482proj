@@ -128,3 +128,23 @@ def save_json_with_sidecar(
     meta_path = sidecar_path(path)
     meta_path.write_text(json.dumps(build_sidecar(params, extra), indent=2), encoding="utf-8")
     return meta_path
+
+
+def cached_file_valid(path: Path, params: dict[str, Any]) -> bool:
+    """True if ``path`` exists and its sidecar was written for exactly these parameters.
+
+    Use for non-JSON outputs (GeoTIFF, NumPy arrays) whose writer is the caller's own.
+    """
+    meta_path = sidecar_path(path)
+    if not (path.is_file() and meta_path.is_file()):
+        return False
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    return meta.get("request_sha256") == request_hash(params)
+
+
+def write_sidecar(path: Path, params: dict[str, Any], extra: dict[str, Any] | None = None) -> Path:
+    """Write the provenance sidecar for a data file the caller has already saved."""
+    meta_path = sidecar_path(path)
+    meta_path.parent.mkdir(parents=True, exist_ok=True)
+    meta_path.write_text(json.dumps(build_sidecar(params, extra), indent=2), encoding="utf-8")
+    return meta_path

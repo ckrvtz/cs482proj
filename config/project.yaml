@@ -38,6 +38,24 @@ connectivity_check:
   bbox_wgs84: [-14.55, 15.45, -14.45, 15.55]   # [lon_min, lat_min, lon_max, lat_max], ~11 x 11 km
   time: {start: "2023-01-01", end: "2023-01-31"}   # dry season, so mostly clear skies
 
+# AOI selection (M1-T02, ROADMAP §4.1). Candidates live in config/aoi_candidates.yaml.
+aoi_selection:
+  box_size_m: 20000            # side of the square AOI in its UTM zone
+  snap_m: 100                  # AOI bounds are multiples of this (= grid.cell_size_m) so cells align
+  dryland_ai_range: [0.05, 0.65]   # UNCCD Art. 1: P/PET between 0.05 and 0.65 = arid, semi-arid, dry sub-humid
+  climatology_years: [1991, 2020]  # rainfall/ETo normals for aridity and seasons
+  season_length_months: 4      # wet = wettest 4 consecutive months; dry = driest 4 consecutive months
+  usable_cloud_pct: 40         # an acquisition date is "usable" if a scene covering the AOI has tile cloud cover <= this
+  min_usable_dates_per_year: 20
+  true_color_resolution_m: 60  # visual check only; ~0.4 PU per image for a 20 km AOI
+  map_years: [2019, 2025]      # years averaged for the rainfall backdrop of the AOI map
+
+# Open climate data on the Climate Hazards Center server (no account, no quota).
+climate_data:
+  chirps_monthly_url: https://data.chc.ucsb.edu/products/CHIRPS/v3.0/monthly/global/cogs/chirps-v3.0.{year}.{month:02d}.cog
+  eto_monthly_url: https://data.chc.ucsb.edu/products/Hobbins_RefET/ETos_p05_monthly_global/tifs/ETos_p05.{year}.{month:02d}.tiff
+  nodata_below: 0              # both products use -9999 over the ocean
+
 # CDSE quota and budget caps in processing units (ROADMAP §3.4).
 quota:
   pu_total: 30000
@@ -66,6 +84,9 @@ paths:
   data_labels: data/labels
   api_usage_log: data/api_usage_log.csv
   catalog_cache: data/raw/catalog
+  aoi_candidates: config/aoi_candidates.yaml
+  aux_cache: data/raw/aux
+  true_color_cache: data/raw/true_color
   figures: reports/figures
   results: reports/results
   evalscripts: src/desertification/evalscripts
