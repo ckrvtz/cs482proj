@@ -122,7 +122,7 @@ Course hard requirements to keep in view all the time:
 | Python client | `sentinelhub` (sentinelhub-py), docs: `https://sentinelhub-py.readthedocs.io` |
 | Collection | Sentinel-2 L2A (bottom-of-atmosphere reflectance, includes the Scene Classification Layer `SCL`) |
 | APIs we use | **Catalog API** (scene search / availability / cloud cover), **Process API** (raster composites via evalscripts), **Statistical API** (cheap aggregated time series over one geometry) |
-| Quota | **30,000 processing units (PU) and 30,000 requests available** on the project account (dashboard, 2026-11-20). CDSE documents the free "Copernicus General Users" tier as 10,000 PU and 10,000 requests per month, 300 of each per minute, and says quotas "are monthly and reset on the first day of every month" ([Quotas](https://documentation.dataspace.copernicus.eu/Quotas.html)). Why our account shows 30,000 is an open question (§12). Budget in §3.4. |
+| Quota | **30,000 processing units (PU) and 30,000 requests available** on the project account (dashboard, 2026-11-20). CDSE documents the free "Copernicus General Users" tier as 10,000 PU and 10,000 requests per month, 300 of each per minute, and says quotas "are monthly and reset on the first day of every month" ([Quotas](https://documentation.dataspace.copernicus.eu/Quotas.html)). **Plan: the whole project is completed within one quota month, so 30,000 PU / 30,000 requests is the total budget for everything** (Decision log #28). Budget in §3.4. |
 | Attribution | Every figure/report using the data must say: *"Contains modified Copernicus Sentinel data [years]."* |
 
 **Sentinel-2 L2A bands we use**
@@ -226,7 +226,7 @@ Document licence and citation for each one in `docs/REFERENCES.md` when you firs
 
 ### 3.4 Quota budget and local data policy
 
-**Budget** (30,000 PU / 30,000 requests). PU is the binding limit; requests are unlikely to be.
+**Budget: 30,000 PU / 30,000 requests for the entire project.** All CDSE work is planned within a single quota month, so don't count on the monthly reset (Decision log #28). PU is the binding limit; requests are unlikely to be. Scope (number of AOIs, years, resolution, bands) is adjusted as the ledger shows real usage: first after the M1-T05 pilot, then before each large batch.
 
 | Use | PU cap | Notes |
 |---|---|---|
@@ -773,6 +773,7 @@ Append-only. Newest at the bottom. Every threshold, AOI bound, library choice, s
 | 25 | 2026-11-20 | DEM from Planetary Computer `cop-dem-glo-30`, not CDSE: CDSE restricts COPERNICUS_30 to authorized user categories and defaults to 90 m | 30 m slope is closer to our 20 m pixel grid; costs no CDSE quota | M1-T01 | M1-T07 |
 | 26 | 2026-11-20 | Official CDSE Processing Unit rules: 1 PU = 512 × 512 px × 3 input bands × 1 data sample, ≤ 16-bit output; 32-bit float output ×2; cost × number of data samples; minimum 0.005 PU per Process request and 0.01 per Statistical request; only successful requests are charged. So a multi-date median evalscript with FLOAT32 output is far costlier than a single scene. M1-T05 must measure it and consider UINT16 output (reflectance × 10000) | Avoids blowing the PU budget on composites | M1-T01 | M1-T05, M1-T06 |
 | 27 | 2026-11-20 | Cloud environment `cs482proj` now also allows 13 documentation hosts (CDSE docs/terms, sentinels.copernicus.eu, spacedata.copernicus.eu, planetarycomputer.microsoft.com, CHC/CHIRPS, esa-worldcover.org, registry.opendata.aws, figshare.com, unstats.un.org, unccd.int, trends.earth). Pages were read with curl and pandoc (the web-fetch tool still could not resolve them); Planetary Computer docs were read from their GitHub sources because the site renders with JavaScript | Needed to cite official sources in M1-T01; local machine unaffected | M1-T01 | Cloud sessions only |
+| 28 | 2026-11-20 | Quotas reset monthly (confirmed by the project owner), but the project will be completed within one month, so **all CDSE usage must fit in 30,000 PU / 30,000 requests in total**. The §3.4 caps are whole-project caps. Scope is revised from the usage ledger as work proceeds, starting with the M1-T05 pilot | Matches the project timeline; prevents planning around a reset that won't come | Project owner | §3.4, M1-T05, M1-T06, M3 |
 
 ---
 
@@ -785,7 +786,7 @@ Resolve these and move the answer to the Decision Log.
 3. Instructor feedback on scope, label strategy and whether weak labels are acceptable. *Deferred (M1-T04).*
 4. Group members for M3 and whether M1/M2 are individual or group submissions. *Deferred (M3-T01).*
 5. Whether `data/processed/` stays under ~50 MB or needs a GitHub Release asset. *Revisit after M1-T08.*
-6. **Quota size and reset:** CDSE documents the free tier as 10,000 PU and 10,000 requests per month, resetting on the 1st, but our dashboard shows 30,000 / 30,000. Is the account in another user category, or is this an accumulated or one-off allowance? Confirm in the dashboard (look for a reset date or account type). If it resets monthly, §3.4's caps are per month and large downloads can be spread across months. *Owner: project owner.*
+6. *(Resolved 2026-11-20: quotas reset monthly, but the project is done within one month on the 30,000 / 30,000 allowance; Decision log #28.)*
 7. Global Aridity Index: version (v3?), resolution, licence and citation could not be read (figshare blocked automated access). *Verify in M1-T02 before use.*
 8. Trends.Earth licence: README says GPL v2.0 or later, but the repository also contains an Apache-2.0 file. *Verify before citing (only if used).*
 9. Personal motivation paragraph for the M1 report (in `reports/milestone1/sources.md` §1). *Owner: project owner.*
