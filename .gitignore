@@ -221,3 +221,17 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ---- Project-specific (P0-T01) ----
+# Raw and interim imagery stay local only (ROADMAP §3.4); keep the folders themselves.
+data/raw/*
+!data/raw/.gitkeep
+data/interim/*
+!data/interim/.gitkeep
+*.tif
+*.tiff
+# Experiment tracking
+wandb/
+mlruns/
+# Sentinel Hub local config, if created by sentinelhub-py tooling
+sh_config.toml

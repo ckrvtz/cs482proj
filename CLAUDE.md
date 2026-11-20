@@ -28,7 +28,7 @@ If a task is ambiguous, or a decision is really the team's to make (AOI choice, 
 
 ```bash
 conda env create -f environment.yml && conda activate desert   # or: pip install -r requirements.txt
-pip install -e .                                               # install src/desertification
+pip install -e ".[dev]"                                        # install src/desertification + pytest/ruff
 pytest -q                                                      # unit tests
 ruff check src tests && ruff format src tests                  # lint + format
 jupyter nbconvert --to notebook --execute --inplace notebooks/<nb>.ipynb   # run a notebook headless

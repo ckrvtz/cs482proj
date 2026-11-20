@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "desertification"
+version = "0.1.0"
+description = "Detecting and predicting dryland desertification from Sentinel-2 L2A imagery (CS482 data mining project)."
+readme = "README.md"
+requires-python = ">=3.11"
+# Minimal runtime deps for the package skeleton. The full, pinned scientific stack
+# (sentinelhub, geopandas, scikit-learn, torch, ...) is added in P0-T02.
+dependencies = [
+    "pyyaml>=6.0",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.5",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+desertification = ["evalscripts/*.js"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "NPY"]

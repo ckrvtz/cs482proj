@@ -1,0 +1,6 @@
+{
+  "type": "FeatureCollection",
+  "name": "aois",
+  "description": "Study AOIs. Empty until M1-T02 selects and validates them (see docs/ROADMAP.md §4.1). Each feature needs properties: aoi_id, name, utm_epsg, wet_season_months, dry_season_months, role, aridity_index, notes.",
+  "features": []
+}
