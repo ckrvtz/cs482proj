@@ -24,6 +24,20 @@ sentinel2:
   invalid_scl: [0, 1, 2, 3, 8, 9, 10, 11]
   max_request_px: 2500
 
+# Sentinel Hub on the Copernicus Data Space Ecosystem (ROADMAP §3.1). Credentials come from
+# SH_CLIENT_ID / SH_CLIENT_SECRET in .env, never from this file.
+sentinel_hub:
+  base_url: https://sh.dataspace.copernicus.eu
+  token_url: https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token
+  collection_name: s2l2a_cdse
+
+# P0-T03 connectivity check: one small test area for one month. This is a placeholder near the
+# Ferlo (Senegal) candidate AOI, not a study AOI; real AOIs are fixed in M1-T02.
+connectivity_check:
+  name: ferlo_test
+  bbox_wgs84: [-14.55, 15.45, -14.45, 15.55]   # [lon_min, lat_min, lon_max, lat_max], ~11 x 11 km
+  time: {start: "2023-01-01", end: "2023-01-31"}   # dry season, so mostly clear skies
+
 # CDSE quota and budget caps in processing units (ROADMAP §3.4).
 quota:
   pu_total: 30000
@@ -51,6 +65,7 @@ paths:
   data_sample: data/sample
   data_labels: data/labels
   api_usage_log: data/api_usage_log.csv
+  catalog_cache: data/raw/catalog
   figures: reports/figures
   results: reports/results
   evalscripts: src/desertification/evalscripts

@@ -16,6 +16,8 @@ Data attribution for figures and reports:
 
 <!-- Library — version, URL, citation if the authors request one. -->
 
+- **sentinelhub-py** 3.12.1 — Sinergise. Python client for Sentinel Hub services (used for CDSE OAuth config and the Catalog API). MIT License. https://github.com/sentinel-hub/sentinelhub-py · docs: https://sentinelhub-py.readthedocs.io
+
 ## Papers and methods
 
 <!-- Author(s) (year). Title. Venue. DOI/URL. One line on what we used it for. -->

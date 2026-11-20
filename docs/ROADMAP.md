@@ -358,7 +358,11 @@ cs482proj/
 ├── src/desertification/
 │   ├── __init__.py
 │   ├── config.py                 # load project.yaml/aois.geojson + .env
-│   ├── sh_client.py              # SHConfig for CDSE, collections
+│   ├── sh_client.py              # SHConfig for CDSE, collections, cached Catalog search
+│   ├── cache.py                  # JSON cache + provenance sidecars (request hash)
+│   ├── usage.py                  # quota ledger (data/api_usage_log.csv), budget caps
+│   ├── security.py               # .env secret-leak check (used by scripts/check_secrets.py)
+│   ├── hardware.py               # device selection, CUDA arch compatibility
 │   ├── evalscripts/              # *.js evalscripts (versioned, commented)
 │   ├── catalog.py                # scene availability queries
 │   ├── ingest.py                 # Process/Statistical API downloads + caching + provenance
@@ -394,7 +398,9 @@ cs482proj/
 │   ├── results/                  # metric CSVs/JSON produced by code (§8)
 │   ├── milestone1/  milestone2/  milestone3/
 ├── scripts/
-│   └── build_pdf.sh              # Markdown report → PDF (pandoc)
+│   ├── build_pdf.sh              # Markdown report → PDF (pandoc)
+│   ├── check_env.py              # verify imports, versions, GPU
+│   └── check_secrets.py          # fail if a .env value appears in a file git would commit
 ├── tests/                        # pytest unit tests (indices, trends, splits, labels)
 └── docs/
     ├── ROADMAP.md  Milestone1-3.md
@@ -702,7 +708,7 @@ Fill in owners and due dates. Tick tasks as they finish (`[x]`, date, note). `[~
 |---|---|---|---|---|---|
 | [x] | P0-T01 | Scaffold repository | | 2026-11-20 | Layout, pyproject, config loader + validation, smoke tests. README setup followed successfully on the local machine (2026-11-20). Module stubs are left to their own tasks |
 | [x] | P0-T02 | Environment & dependencies | | 2026-11-20 | Pinned Python 3.12 env; verified in a fresh cloud venv (CPU) and on the local machine with the GTX 1080 Ti: all imports OK, GPU matmul OK, 15/15 tests pass (Decision log #17) |
-| [ ] | P0-T03 | CDSE credentials & connectivity | | | |
+| [~] | P0-T03 | CDSE credentials & connectivity | | 2026-11-20 | Code, notebook section, quota ledger and leak check done; 37 tests pass (API mocked). **Real Catalog search still to run locally** (credentials are only on the local machine): set `ALLOW_API_CALLS = True` in `notebooks/01_data_discovery.ipynb`, run it, then `python scripts/check_secrets.py` |
 | [ ] | M1-T01 | Document candidate sources | | | |
 | [ ] | M1-T02 | Select & validate AOIs | | | |
 | [ ] | M1-T03 | Feasibility & scale | | | |
@@ -757,6 +763,10 @@ Append-only. Newest at the bottom. Every threshold, AOI bound, library choice, s
 | 15 | 2026-11-20 | Reports: pandoc 3.1 + XeLaTeX (TeX Live 2023) via `scripts/build_pdf.sh`; tested with a figure, table, math and links. Engine overridable with `PDF_ENGINE` | Standard pandoc route; same on Linux (TeX Live) and Windows (MiKTeX) | P0-T02 | Reports |
 | 16 | 2026-11-20 | Created a personal cloud environment `cs482proj` allowing `download.pytorch.org` and `download-r2.pytorch.org` (PyTorch index and wheel host). `pypi.nvidia.com` stays blocked there; in the cloud sandbox install the `nvidia-*` deps from PyPI first | Needed to find and verify the torch build from cloud sessions; local machine unaffected | P0-T02 | Cloud sessions only |
 | 17 | 2026-11-20 | Local GPU machine verified: Fedora (kernel 7.3, glibc 2.43), Python 3.12.16, NVIDIA driver 580.196.07 (supports up to CUDA 13.0), GTX 1080 Ti, compute capability 6.1, 10.9 GB usable. `check_env.py --require-gpu`: all 30 imports OK at the pinned versions; torch 2.14.1+cu126 compiled for sm_50–sm_90 incl. sm_60; 2048×2048 matmul on cuda 110.7 ms (first call, includes warm-up), max abs GPU–CPU difference 5.19e-04; ALL CHECKS PASSED. pytest 15/15 | Closes P0-T02; confirms the cu126 build runs on the 1080 Ti | Project owner (local run) | M3-T10 |
+| 18 | 2026-11-20 | CDSE endpoints (base URL, token URL, collection name) and the P0-T03 test area live in `config/project.yaml`. Test area `ferlo_test`: [-14.55, 15.45, -14.45, 15.55] (~11 × 11 km near the Ferlo candidate AOI), January 2023 (dry season). It is a connectivity test, not a study AOI | No hard-coded endpoints or places; small, mostly cloud-free month gives a quick yes/no | P0-T03 | P0-T03 |
+| 19 | 2026-11-20 | API results are cached as JSON with a `<file>.meta.json` sidecar holding the request parameters, their SHA-256, UTC timestamp and sentinelhub version; a cache hit requires a matching hash. Catalog cache: `data/raw/catalog/` (local only). API calls also need an explicit `allow_api=True` / `ALLOW_API_CALLS = True` | Avoids duplicate requests and stale results; makes quota spending deliberate | P0-T03 | All ingestion |
+| 20 | 2026-11-20 | Quota ledger `data/api_usage_log.csv` columns: date, task_id, api, budget_category (§3.4 rows), request_count, pu_before/after, requests_before/after (dashboard readings, may be blank), purpose. Starts with a 30,000 / 30,000 balance row. `usage.check_cap` tests a planned batch against its category cap | Puts the §3.4 budget into code | P0-T03 | M1-T05, M1-T06 |
+| 21 | 2026-11-20 | `scripts/check_secrets.py`: compares `.env` values (≥ 8 chars) with every tracked or not-ignored file, including notebook outputs; prints file names only. Run before committing anything produced with credentials loaded | Checks the "no secret in committed files or outputs" rule mechanically | P0-T03 | All |
 
 ---
 
@@ -765,7 +775,7 @@ Append-only. Newest at the bottom. Every threshold, AOI bound, library choice, s
 Resolve these and move the answer to the Decision Log.
 
 1. Final AOI list and bounding boxes. *To be settled in M1-T02.*
-2. Measured PU cost per request, and whether/when the 30,000 PU / 30,000 request balance resets. *Measure in P0-T03 / M1-T05.*
+2. Measured PU cost per request, and whether/when the 30,000 PU / 30,000 request balance resets. Does a Catalog API search use PUs, requests, or neither? *Read the dashboard before/after the P0-T03 run; PU per Process request in M1-T05.*
 3. Instructor feedback on scope, label strategy and whether weak labels are acceptable. *Deferred (M1-T04).*
 4. Group members for M3 and whether M1/M2 are individual or group submissions. *Deferred (M3-T01).*
 5. Whether `data/processed/` stays under ~50 MB or needs a GitHub Release asset. *Revisit after M1-T08.*

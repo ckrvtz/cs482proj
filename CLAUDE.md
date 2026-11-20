@@ -34,6 +34,7 @@ ruff check src tests && ruff format src tests                  # lint + format
 jupyter nbconvert --to notebook --execute --inplace notebooks/<nb>.ipynb   # run a notebook headless
 scripts/build_pdf.sh reports/milestone1/milestone1_report.md               # Markdown report → PDF (pandoc)
 python scripts/check_env.py [--require-gpu]                               # verify imports, versions, GPU
+python scripts/check_secrets.py                                           # fail if a .env value is in any file git would commit
 ```
 
 ## Compute and storage
@@ -78,7 +79,8 @@ python scripts/check_env.py [--require-gpu]                               # veri
 - **Credentials:** only through environment variables `SH_CLIENT_ID` / `SH_CLIENT_SECRET`, loaded from a gitignored `.env`. Never write a secret into code, config, notebook output, logs, commit messages or chat. If you find a committed secret, stop and tell the user.
 - **Endpoint:** CDSE (`https://sh.dataspace.copernicus.eu`) with the CDSE token URL, via `desertification.sh_client`. Don't use the commercial `services.sentinel-hub.com` endpoints.
 - **Quota is finite: 30,000 PU and 30,000 requests in total**, split into caps in ROADMAP §3.4. Before making **more than ~10 API requests in one go**, or any bulk/scaled download, **stop and ask the user**, giving an estimate of request count and processing units and the remaining budget.
-- Log every request batch in `data/api_usage_log.csv` (date, task ID, API, request count, PU before/after, purpose).
+- Log every request batch in `data/api_usage_log.csv` with `desertification.usage.make_entry` / `append_usage`; check a planned batch with `usage.check_cap` first.
+- API-calling code takes an explicit opt-in (`allow_api=True`; notebooks use an `ALLOW_API_CALLS` flag that defaults to `False`) and reads the cache first (`desertification.cache`).
 - **Cache everything.** Every download writes to `data/raw/...` with a JSON **provenance sidecar** (request params, evalscript SHA-256, time interval, bbox, CRS, resolution, timestamp, sentinelhub version). Downloads skip if a matching file + sidecar exist.
 - Use **Catalog API** to check availability, **Process API** for rasters, **Statistical API** for cheap single-geometry time series.
 - Sentinel-2 L2A gotchas you must respect (details in ROADMAP §3.1):
@@ -116,7 +118,8 @@ python scripts/check_env.py [--require-gpu]                               # veri
 ## Git
 
 - Small, focused commits whose messages start with the task ID.
-- Never commit `.env`, credentials, `data/raw/`, `data/interim/`, large binaries or notebook outputs containing secrets.
+- Never commit `.env`, credentials, `data/raw/`, `data/interim/`, large binaries or notebook outputs containing secrets. Run `python scripts/check_secrets.py` before committing anything produced with credentials loaded.
+- Never create, overwrite or delete `.env`: it holds the user's real credentials.
 - Don't rewrite shared history. Don't push to `main` unless the team has agreed to; use feature branches.
 
 ## Don'ts (quick list)

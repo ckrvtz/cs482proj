@@ -1,0 +1,2 @@
+date,task_id,api,budget_category,request_count,pu_before,pu_after,requests_before,requests_after,purpose
+2026-11-20,P0-T03,balance,setup_pilot,0,30000,30000,30000,30000,Starting balance on the CDSE account
