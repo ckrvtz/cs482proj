@@ -58,7 +58,9 @@ def make_entry(
     budget_category : str
         One of ``CATEGORIES`` (the §3.4 budget rows).
     request_count : int
-        Requests made in this batch (>= 0).
+        HTTP requests this code made in the batch (>= 0), including OAuth token requests.
+        The quota charge can be lower (CDSE did not charge the token request in P0-T03);
+        the charged amount is the difference of the dashboard balances.
     purpose : str
         Short description.
     pu_before, pu_after, requests_before, requests_after : float, optional

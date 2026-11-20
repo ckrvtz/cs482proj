@@ -708,7 +708,7 @@ Fill in owners and due dates. Tick tasks as they finish (`[x]`, date, note). `[~
 |---|---|---|---|---|---|
 | [x] | P0-T01 | Scaffold repository | | 2026-11-20 | Layout, pyproject, config loader + validation, smoke tests. README setup followed successfully on the local machine (2026-11-20). Module stubs are left to their own tasks |
 | [x] | P0-T02 | Environment & dependencies | | 2026-11-20 | Pinned Python 3.12 env; verified in a fresh cloud venv (CPU) and on the local machine with the GTX 1080 Ti: all imports OK, GPU matmul OK, 15/15 tests pass (Decision log #17) |
-| [~] | P0-T03 | CDSE credentials & connectivity | | 2026-11-20 | Code, notebook section, quota ledger and leak check done; 37 tests pass (API mocked). **Real Catalog search still to run locally** (credentials are only on the local machine): set `ALLOW_API_CALLS = True` in `notebooks/01_data_discovery.ipynb`, run it, then `python scripts/check_secrets.py` |
+| [x] | P0-T03 | CDSE credentials & connectivity | | 2026-11-20 | Local run: Catalog search over `ferlo_test`, Jan 2023 returned 6 scenes (tile 28PEC; cloud cover 0–98.7%, median 37.2%; 2 scenes < 10%). Ledger updated; 0 PU and 1 request charged |
 | [ ] | M1-T01 | Document candidate sources | | | |
 | [ ] | M1-T02 | Select & validate AOIs | | | |
 | [ ] | M1-T03 | Feasibility & scale | | | |
@@ -767,6 +767,7 @@ Append-only. Newest at the bottom. Every threshold, AOI bound, library choice, s
 | 19 | 2026-11-20 | API results are cached as JSON with a `<file>.meta.json` sidecar holding the request parameters, their SHA-256, UTC timestamp and sentinelhub version; a cache hit requires a matching hash. Catalog cache: `data/raw/catalog/` (local only). API calls also need an explicit `allow_api=True` / `ALLOW_API_CALLS = True` | Avoids duplicate requests and stale results; makes quota spending deliberate | P0-T03 | All ingestion |
 | 20 | 2026-11-20 | Quota ledger `data/api_usage_log.csv` columns: date, task_id, api, budget_category (§3.4 rows), request_count, pu_before/after, requests_before/after (dashboard readings, may be blank), purpose. Starts with a 30,000 / 30,000 balance row. `usage.check_cap` tests a planned batch against its category cap | Puts the §3.4 budget into code | P0-T03 | M1-T05, M1-T06 |
 | 21 | 2026-11-20 | `scripts/check_secrets.py`: compares `.env` values (≥ 8 chars) with every tracked or not-ignored file, including notebook outputs; prints file names only. Run before committing anything produced with credentials loaded | Checks the "no secret in committed files or outputs" rule mechanically | P0-T03 | All |
+| 22 | 2026-11-20 | P0-T03 result (local run): 6 Sentinel-2 L2A scenes over `ferlo_test` in Jan 2023, all on MGRS tile 28PEC. Dashboard: PU 30,000 → 30,000, requests 30,000 → 29,999. So **a one-page Catalog search costs 1 request and 0 PU, and the OAuth token request is not charged**. The ledger's `request_count` counts every HTTP call we make (logged 2 = token + 1 Catalog page); the charged amount is the difference of the dashboard readings | Catalog checks are effectively free, so availability checks (M1-T02) can be done freely within reason; budget planning should use dashboard differences, not `request_count` | P0-T03 (project owner's run) | M1-T02, M1-T05, M1-T06 |
 
 ---
 
@@ -775,7 +776,7 @@ Append-only. Newest at the bottom. Every threshold, AOI bound, library choice, s
 Resolve these and move the answer to the Decision Log.
 
 1. Final AOI list and bounding boxes. *To be settled in M1-T02.*
-2. Measured PU cost per request, and whether/when the 30,000 PU / 30,000 request balance resets. Does a Catalog API search use PUs, requests, or neither? *Read the dashboard before/after the P0-T03 run; PU per Process request in M1-T05.*
+2. PU cost per Process API request, and whether/when the 30,000 PU / 30,000 request balance resets. *Measure in M1-T05.* (Catalog cost answered in Decision log #22.)
 3. Instructor feedback on scope, label strategy and whether weak labels are acceptable. *Deferred (M1-T04).*
 4. Group members for M3 and whether M1/M2 are individual or group submissions. *Deferred (M3-T01).*
 5. Whether `data/processed/` stays under ~50 MB or needs a GitHub Release asset. *Revisit after M1-T08.*
