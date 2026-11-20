@@ -122,7 +122,7 @@ Course hard requirements to keep in view all the time:
 | Python client | `sentinelhub` (sentinelhub-py), docs: `https://sentinelhub-py.readthedocs.io` |
 | Collection | Sentinel-2 L2A (bottom-of-atmosphere reflectance, includes the Scene Classification Layer `SCL`) |
 | APIs we use | **Catalog API** (scene search / availability / cloud cover), **Process API** (raster composites via evalscripts), **Statistical API** (cheap aggregated time series over one geometry) |
-| Quota | **30,000 processing units (PU) and 30,000 requests available** on the project account (as of 2026-11-20). Check in the dashboard whether and when they reset before planning re-runs. Budget in §3.4. |
+| Quota | **30,000 processing units (PU) and 30,000 requests available** on the project account (dashboard, 2026-11-20). CDSE documents the free "Copernicus General Users" tier as 10,000 PU and 10,000 requests per month, 300 of each per minute, and says quotas "are monthly and reset on the first day of every month" ([Quotas](https://documentation.dataspace.copernicus.eu/Quotas.html)). Why our account shows 30,000 is an open question (§12). Budget in §3.4. |
 | Attribution | Every figure/report using the data must say: *"Contains modified Copernicus Sentinel data [years]."* |
 
 **Sentinel-2 L2A bands we use**
@@ -216,8 +216,8 @@ S2L2A_CDSE = DataCollection.SENTINEL2_L2A.define_from(
 
 | Dataset | Use | Access (verify in `M1-T02`) |
 |---|---|---|
-| **CHIRPS v2.0** monthly precipitation (~5 km, 50°S–50°N) | Rainfall adjustment for RESTREND; rainfall features | UCSB Climate Hazards Center data portal (`https://data.chc.ucsb.edu/products/CHIRPS-2.0/`) |
-| **Copernicus DEM GLO-30** | Elevation, slope, aspect | Sentinel Hub on CDSE (DEM collection) or Planetary Computer |
+| **CHIRPS v3** monthly precipitation (0.05°, 60°N–60°S, 1981–present) | Rainfall adjustment for RESTREND; rainfall features | UCSB Climate Hazards Center (`https://data.chc.ucsb.edu/products/CHIRPS/v3.0/`). v3 replaces v2: "Production of CHIRPS v2 will end after December 2026" (Decision log #24) |
+| **Copernicus DEM GLO-30** | Elevation, slope, aspect | **Planetary Computer** `cop-dem-glo-30` (open). On CDSE, COPERNICUS_30 is restricted to authorized user categories and requests default to the 90 m DEM (Decision log #25) |
 | **ESA WorldCover** 10 m (2020, 2021) | Land-cover fractions per cell; masks (water, built-up, cropland); stratification | AWS Open Data (`esa-worldcover` bucket) or Planetary Computer |
 | **Global Aridity Index** (CGIAR-CSI / Trabucco & Zomer) | Confirm AOIs are drylands; feature | Figshare release by the authors |
 | **Trends.Earth / SDG 15.3.1** layers (optional) | External comparison for our degradation labels | Trends.Earth docs / data |
@@ -709,7 +709,7 @@ Fill in owners and due dates. Tick tasks as they finish (`[x]`, date, note). `[~
 | [x] | P0-T01 | Scaffold repository | | 2026-11-20 | Layout, pyproject, config loader + validation, smoke tests. README setup followed successfully on the local machine (2026-11-20). Module stubs are left to their own tasks |
 | [x] | P0-T02 | Environment & dependencies | | 2026-11-20 | Pinned Python 3.12 env; verified in a fresh cloud venv (CPU) and on the local machine with the GTX 1080 Ti: all imports OK, GPU matmul OK, 15/15 tests pass (Decision log #17) |
 | [x] | P0-T03 | CDSE credentials & connectivity | | 2026-11-20 | Local run: Catalog search over `ferlo_test`, Jan 2023 returned 6 scenes (tile 28PEC; cloud cover 0–98.7%, median 37.2%; 2 scenes < 10%). Ledger updated; 0 PU and 1 request charged |
-| [ ] | M1-T01 | Document candidate sources | | | |
+| [~] | M1-T01 | Document candidate sources | | 2026-11-20 | `reports/milestone1/sources.md` written from official docs (links, quotes, access date); builds to PDF with no warnings. **Pending: the project owner's personal-motivation sentences (marked TODO)**; aridity-index facts left `[VERIFY]` for M1-T02 |
 | [ ] | M1-T02 | Select & validate AOIs | | | |
 | [ ] | M1-T03 | Feasibility & scale | | | |
 | [ ] | M1-T04 | Instructor discussion | | | Deferred, non-blocking |
@@ -768,6 +768,11 @@ Append-only. Newest at the bottom. Every threshold, AOI bound, library choice, s
 | 20 | 2026-11-20 | Quota ledger `data/api_usage_log.csv` columns: date, task_id, api, budget_category (§3.4 rows), request_count, pu_before/after, requests_before/after (dashboard readings, may be blank), purpose. Starts with a 30,000 / 30,000 balance row. `usage.check_cap` tests a planned batch against its category cap | Puts the §3.4 budget into code | P0-T03 | M1-T05, M1-T06 |
 | 21 | 2026-11-20 | `scripts/check_secrets.py`: compares `.env` values (≥ 8 chars) with every tracked or not-ignored file, including notebook outputs; prints file names only. Run before committing anything produced with credentials loaded | Checks the "no secret in committed files or outputs" rule mechanically | P0-T03 | All |
 | 22 | 2026-11-20 | P0-T03 result (local run): 6 Sentinel-2 L2A scenes over `ferlo_test` in Jan 2023, all on MGRS tile 28PEC. Dashboard: PU 30,000 → 30,000, requests 30,000 → 29,999. So **a one-page Catalog search costs 1 request and 0 PU, and the OAuth token request is not charged**. The ledger's `request_count` counts every HTTP call we make (logged 2 = token + 1 Catalog page); the charged amount is the difference of the dashboard readings | Catalog checks are effectively free, so availability checks (M1-T02) can be done freely within reason; budget planning should use dashboard differences, not `request_count` | P0-T03 (project owner's run) | M1-T02, M1-T05, M1-T06 |
+| 23 | 2026-11-20 | M1-T01: Sentinel Hub on CDSE stays the primary source; Microsoft Planetary Computer STAC is secondary: open 30 m DEM, WorldCover, a Sentinel-2 fallback, and optional Landsat context back to 1982. PC's docs call it a "Preview" with no service-level commitment | Server-side compositing and harmonised L2A keep downloads small; PC needs no account or quota but would mean downloading and processing whole scenes ourselves | M1-T01 | Ingestion |
+| 24 | 2026-11-20 | Use **CHIRPS v3**, not v2. CHC states v2 production ends after December 2026. v3 covers 60°N–60°S, 1981–present, CC BY 4.0; cite the data DOI 10.15780/G2JQ0P and Funk et al. (2026) Sci Data 13:718 | Continuity, and wider latitude coverage | M1-T01 | M1-T07, labels |
+| 25 | 2026-11-20 | DEM from Planetary Computer `cop-dem-glo-30`, not CDSE: CDSE restricts COPERNICUS_30 to authorized user categories and defaults to 90 m | 30 m slope is closer to our 20 m pixel grid; costs no CDSE quota | M1-T01 | M1-T07 |
+| 26 | 2026-11-20 | Official CDSE Processing Unit rules: 1 PU = 512 × 512 px × 3 input bands × 1 data sample, ≤ 16-bit output; 32-bit float output ×2; cost × number of data samples; minimum 0.005 PU per Process request and 0.01 per Statistical request; only successful requests are charged. So a multi-date median evalscript with FLOAT32 output is far costlier than a single scene. M1-T05 must measure it and consider UINT16 output (reflectance × 10000) | Avoids blowing the PU budget on composites | M1-T01 | M1-T05, M1-T06 |
+| 27 | 2026-11-20 | Cloud environment `cs482proj` now also allows 13 documentation hosts (CDSE docs/terms, sentinels.copernicus.eu, spacedata.copernicus.eu, planetarycomputer.microsoft.com, CHC/CHIRPS, esa-worldcover.org, registry.opendata.aws, figshare.com, unstats.un.org, unccd.int, trends.earth). Pages were read with curl and pandoc (the web-fetch tool still could not resolve them); Planetary Computer docs were read from their GitHub sources because the site renders with JavaScript | Needed to cite official sources in M1-T01; local machine unaffected | M1-T01 | Cloud sessions only |
 
 ---
 
@@ -776,10 +781,14 @@ Append-only. Newest at the bottom. Every threshold, AOI bound, library choice, s
 Resolve these and move the answer to the Decision Log.
 
 1. Final AOI list and bounding boxes. *To be settled in M1-T02.*
-2. PU cost per Process API request, and whether/when the 30,000 PU / 30,000 request balance resets. *Measure in M1-T05.* (Catalog cost answered in Decision log #22.)
+2. PU cost per Process API request. *Measure in M1-T05.* (Catalog cost answered in Decision log #22.)
 3. Instructor feedback on scope, label strategy and whether weak labels are acceptable. *Deferred (M1-T04).*
 4. Group members for M3 and whether M1/M2 are individual or group submissions. *Deferred (M3-T01).*
 5. Whether `data/processed/` stays under ~50 MB or needs a GitHub Release asset. *Revisit after M1-T08.*
+6. **Quota size and reset:** CDSE documents the free tier as 10,000 PU and 10,000 requests per month, resetting on the 1st, but our dashboard shows 30,000 / 30,000. Is the account in another user category, or is this an accumulated or one-off allowance? Confirm in the dashboard (look for a reset date or account type). If it resets monthly, §3.4's caps are per month and large downloads can be spread across months. *Owner: project owner.*
+7. Global Aridity Index: version (v3?), resolution, licence and citation could not be read (figshare blocked automated access). *Verify in M1-T02 before use.*
+8. Trends.Earth licence: README says GPL v2.0 or later, but the repository also contains an Apache-2.0 file. *Verify before citing (only if used).*
+9. Personal motivation paragraph for the M1 report (in `reports/milestone1/sources.md` §1). *Owner: project owner.*
 
 ---
 
