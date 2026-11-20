@@ -1,0 +1,7 @@
+aoi_id,role,rain_mm_per_year,eto_mm_per_year,aridity_index,aridity_class,wet_season_months,dry_season_months,wet_season_rain_share
+aral,degrading,184.8,1288.1,0.143,dryland,"[12, 1, 2, 3]","[6, 7, 8, 9]",0.447
+ferlo,mixed,438.5,2565.0,0.171,dryland,"[7, 8, 9, 10]","[1, 2, 3, 4]",0.924
+fakara,mixed,509.8,2323.0,0.219,dryland,"[6, 7, 8, 9]","[11, 12, 1, 2]",0.93
+kubuqi,improving_control,292.4,1239.3,0.236,dryland,"[6, 7, 8, 9]","[11, 12, 1, 2]",0.757
+urmia,degrading,269.2,1404.1,0.192,dryland,"[2, 3, 4, 5]","[6, 7, 8, 9]",0.544
+erg,stable_control,91.6,2150.6,0.043,hyper-arid,"[1, 2, 3, 4]","[5, 6, 7, 8]",0.461

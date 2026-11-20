@@ -1,6 +1,427 @@
 {
   "type": "FeatureCollection",
   "name": "aois",
-  "description": "Study AOIs. Empty until M1-T02 selects and validates them (see docs/ROADMAP.md §4.1). Each feature needs properties: aoi_id, name, utm_epsg, wet_season_months, dry_season_months, role, aridity_index, notes.",
-  "features": []
+  "description": "Study AOIs selected in M1-T02 (notebooks/01b_aoi_selection.ipynb). Polygons are the UTM squares in WGS84; bbox_utm/utm_epsg are authoritative for requests.",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "aoi_id": "aral",
+        "name": "Aral Sea / Aralkum (UZ/KZ)",
+        "role": "degrading",
+        "expected_dynamic": "Strong degradation, exposed seabed, salinisation",
+        "centre_wgs84": [
+          60.0,
+          45.0
+        ],
+        "utm_epsg": 32641,
+        "bbox_utm": [
+          253600.0,
+          4977300.0,
+          273600.0,
+          4997300.0
+        ],
+        "bbox_wgs84": [
+          59.869,
+          44.906463,
+          60.131798,
+          45.092916
+        ],
+        "notes": null,
+        "aridity_index": 0.144,
+        "aridity_class": "dryland",
+        "aridity_source": "CHIRPS v3 / Hobbins ETo, 1991-2020",
+        "wet_season_months": [
+          12,
+          1,
+          2,
+          3
+        ],
+        "dry_season_months": [
+          6,
+          7,
+          8,
+          9
+        ],
+        "min_usable_dates_per_year": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              59.878784,
+              44.906463
+            ],
+            [
+              60.131798,
+              44.913104
+            ],
+            [
+              60.122805,
+              45.092916
+            ],
+            [
+              59.869,
+              45.086233
+            ],
+            [
+              59.878784,
+              44.906463
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "aoi_id": "ferlo",
+        "name": "Ferlo, Senegal (Sahel)",
+        "role": "mixed",
+        "expected_dynamic": "Grazing pressure, rainfall-driven variability",
+        "centre_wgs84": [
+          -14.5,
+          15.5
+        ],
+        "utm_epsg": 32628,
+        "bbox_utm": [
+          543600.0,
+          1703700.0,
+          563600.0,
+          1723700.0
+        ],
+        "bbox_wgs84": [
+          -14.593665,
+          15.409439,
+          -14.406764,
+          15.59067
+        ],
+        "notes": null,
+        "aridity_index": 0.171,
+        "aridity_class": "dryland",
+        "aridity_source": "CHIRPS v3 / Hobbins ETo, 1991-2020",
+        "wet_season_months": [
+          7,
+          8,
+          9,
+          10
+        ],
+        "dry_season_months": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "min_usable_dates_per_year": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -14.593665,
+              15.409858
+            ],
+            [
+              -14.407279,
+              15.409439
+            ],
+            [
+              -14.406764,
+              15.590246
+            ],
+            [
+              -14.593312,
+              15.59067
+            ],
+            [
+              -14.593665,
+              15.409858
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "aoi_id": "fakara",
+        "name": "Fakara / Tillaberi, Niger (Sahel)",
+        "role": "mixed",
+        "expected_dynamic": "Cropland expansion, fallow loss",
+        "centre_wgs84": [
+          2.6,
+          13.5
+        ],
+        "utm_epsg": 32631,
+        "bbox_utm": [
+          446700.0,
+          1482500.0,
+          466700.0,
+          1502500.0
+        ],
+        "bbox_wgs84": [
+          2.507305,
+          13.40973,
+          2.69241,
+          13.590867
+        ],
+        "notes": null,
+        "aridity_index": 0.22,
+        "aridity_class": "dryland",
+        "aridity_source": "CHIRPS v3 / Hobbins ETo, 1991-2020",
+        "wet_season_months": [
+          6,
+          7,
+          8,
+          9
+        ],
+        "dry_season_months": [
+          11,
+          12,
+          1,
+          2
+        ],
+        "min_usable_dates_per_year": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              2.507675,
+              13.40973
+            ],
+            [
+              2.69241,
+              13.410022
+            ],
+            [
+              2.692178,
+              13.590867
+            ],
+            [
+              2.507305,
+              13.59057
+            ],
+            [
+              2.507675,
+              13.40973
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "aoi_id": "kubuqi",
+        "name": "Kubuqi Desert, Inner Mongolia (CN)",
+        "role": "improving_control",
+        "expected_dynamic": "Afforestation / re-greening",
+        "centre_wgs84": [
+          108.5,
+          40.2
+        ],
+        "utm_epsg": 32649,
+        "bbox_utm": [
+          277200.0,
+          4443000.0,
+          297200.0,
+          4463000.0
+        ],
+        "bbox_wgs84": [
+          108.378982,
+          40.107821,
+          108.620366,
+          40.292912
+        ],
+        "notes": null,
+        "aridity_index": 0.235,
+        "aridity_class": "dryland",
+        "aridity_source": "CHIRPS v3 / Hobbins ETo, 1991-2020",
+        "wet_season_months": [
+          6,
+          7,
+          8,
+          9
+        ],
+        "dry_season_months": [
+          11,
+          12,
+          1,
+          2
+        ],
+        "min_usable_dates_per_year": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              108.385909,
+              40.107821
+            ],
+            [
+              108.620366,
+              40.112879
+            ],
+            [
+              108.614059,
+              40.292912
+            ],
+            [
+              108.378982,
+              40.287823
+            ],
+            [
+              108.385909,
+              40.107821
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "aoi_id": "urmia",
+        "name": "Lake Urmia basin, Iran",
+        "role": "degrading",
+        "expected_dynamic": "Lake shrinkage, salt flats, agricultural pressure",
+        "centre_wgs84": [
+          45.3,
+          37.7
+        ],
+        "utm_epsg": 32638,
+        "bbox_utm": [
+          516400.0,
+          4162600.0,
+          536400.0,
+          4182600.0
+        ],
+        "bbox_wgs84": [
+          45.185815,
+          37.609774,
+          45.413414,
+          37.790614
+        ],
+        "notes": "Centre is on the lake itself; may need moving to the shore/farmland after the imagery check.",
+        "aridity_index": 0.192,
+        "aridity_class": "dryland",
+        "aridity_source": "CHIRPS v3 / Hobbins ETo, 1991-2020",
+        "wet_season_months": [
+          2,
+          3,
+          4,
+          5
+        ],
+        "dry_season_months": [
+          6,
+          7,
+          8,
+          9
+        ],
+        "min_usable_dates_per_year": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              45.185815,
+              37.610348
+            ],
+            [
+              45.412415,
+              37.609774
+            ],
+            [
+              45.413414,
+              37.790036
+            ],
+            [
+              45.186265,
+              37.790614
+            ],
+            [
+              45.185815,
+              37.610348
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "aoi_id": "erg",
+        "name": "Grand Erg Occidental, Algeria (stable erg)",
+        "role": "stable_control",
+        "expected_dynamic": "Stable bare sand (hyper-arid control)",
+        "centre_wgs84": [
+          0.6,
+          30.6
+        ],
+        "utm_epsg": 32631,
+        "bbox_utm": [
+          259900.0,
+          3377700.0,
+          279900.0,
+          3397700.0
+        ],
+        "bbox_wgs84": [
+          0.493482,
+          30.507636,
+          0.706378,
+          30.6918
+        ],
+        "notes": "Location chosen for M1-T02 as a hyper-arid sand-sea control; confirm on the true-colour image.",
+        "aridity_index": 0.043,
+        "aridity_class": "hyper-arid",
+        "aridity_source": "CHIRPS v3 / Hobbins ETo, 1991-2020",
+        "wet_season_months": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "dry_season_months": [
+          5,
+          6,
+          7,
+          8
+        ],
+        "min_usable_dates_per_year": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              0.498122,
+              30.507636
+            ],
+            [
+              0.706378,
+              30.51147
+            ],
+            [
+              0.702124,
+              30.6918
+            ],
+            [
+              0.493482,
+              30.687939
+            ],
+            [
+              0.498122,
+              30.507636
+            ]
+          ]
+        ]
+      }
+    }
+  ]
 }
