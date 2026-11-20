@@ -32,7 +32,14 @@ pip install -e .                                               # install src/des
 pytest -q                                                      # unit tests
 ruff check src tests && ruff format src tests                  # lint + format
 jupyter nbconvert --to notebook --execute --inplace notebooks/<nb>.ipynb   # run a notebook headless
+scripts/build_pdf.sh reports/milestone1/milestone1_report.md               # Markdown report → PDF (pandoc)
 ```
+
+## Compute and storage
+
+- Development runs on a **local machine with an NVIDIA GTX 1080 Ti** (Pascal, sm_61, 11 GB VRAM). Colab is only a fallback.
+- PyTorch code picks the device automatically (`cuda` if available, else `cpu`) and must still run on CPU. Size batches for 11 GB. Don't upgrade PyTorch/CUDA without checking `torch.cuda.get_arch_list()` still includes `sm_61`.
+- Imagery stays **local**. `data/raw/` and `data/interim/` are the download cache and the only copy: **never delete or overwrite them without asking**. No commercial cloud storage.
 
 ## Repository layout (summary — full version in ROADMAP §5)
 
@@ -68,7 +75,8 @@ jupyter nbconvert --to notebook --execute --inplace notebooks/<nb>.ipynb   # run
 
 - **Credentials:** only through environment variables `SH_CLIENT_ID` / `SH_CLIENT_SECRET`, loaded from a gitignored `.env`. Never write a secret into code, config, notebook output, logs, commit messages or chat. If you find a committed secret, stop and tell the user.
 - **Endpoint:** CDSE (`https://sh.dataspace.copernicus.eu`) with the CDSE token URL, via `desertification.sh_client`. Don't use the commercial `services.sentinel-hub.com` endpoints.
-- **Quota is limited and shared.** Before making **more than ~10 API requests in one go**, or any bulk/scaled download, **stop and ask the user**, giving an estimate of request count and processing units.
+- **Quota is finite: 30,000 PU and 30,000 requests in total**, split into caps in ROADMAP §3.4. Before making **more than ~10 API requests in one go**, or any bulk/scaled download, **stop and ask the user**, giving an estimate of request count and processing units and the remaining budget.
+- Log every request batch in `data/api_usage_log.csv` (date, task ID, API, request count, PU before/after, purpose).
 - **Cache everything.** Every download writes to `data/raw/...` with a JSON **provenance sidecar** (request params, evalscript SHA-256, time interval, bbox, CRS, resolution, timestamp, sentinelhub version). Downloads skip if a matching file + sidecar exist.
 - Use **Catalog API** to check availability, **Process API** for rasters, **Statistical API** for cheap single-geometry time series.
 - Sentinel-2 L2A gotchas you must respect (details in ROADMAP §3.1):
@@ -76,7 +84,7 @@ jupyter nbconvert --to notebook --execute --inplace notebooks/<nb>.ipynb   # run
   - Mask clouds with SCL (invalid set in config). Always carry the **valid-observation count**. Bright desert sand can be misflagged as cloud, so check for holes.
   - Max 2500 × 2500 px per Process API request. Split larger AOIs.
   - Seasons are **AOI-specific** (from `aois.geojson`), never calendar seasons.
-- Never commit raw rasters or large files. `data/processed/` is committed only if its total is ≲ 50 MB; otherwise it goes in a GitHub Release (see Open questions).
+- Never commit raw rasters or large files. `data/processed/` is committed only if its total is ≲ 50 MB; if it grows past that, raise it with the user (a GitHub Release asset is the likely option).
 - Each external dataset (CHIRPS, DEM, WorldCover, aridity, Landsat, …) gets its licence and citation added to `docs/REFERENCES.md` when first used.
 
 ## Machine learning integrity rules (non-negotiable)
@@ -99,7 +107,7 @@ jupyter nbconvert --to notebook --execute --inplace notebooks/<nb>.ipynb   # run
 
 ## Report writing
 
-- Draft in `reports/milestoneN/` as Markdown, following the required sections in the ROADMAP task block and the milestone file. Keep a requirements checklist against the milestone file.
+- Write reports in `reports/milestoneN/` as Markdown and build the PDF with `scripts/build_pdf.sh` (pandoc). Use relative image paths to `reports/figures/` so the build finds them. Follow the required sections in the ROADMAP task block and the milestone file. Keep a requirements checklist against the milestone file.
 - Refer to figures by filename and tables by results CSV. Keep claims specific and quantified.
 - Milestone 2 has a **2–3 page** limit; Milestone 3's video has a **30 minute** limit.
 
