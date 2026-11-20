@@ -709,7 +709,7 @@ Fill in owners and due dates. Tick tasks as they finish (`[x]`, date, note). `[~
 | [x] | P0-T01 | Scaffold repository | | 2026-11-20 | Layout, pyproject, config loader + validation, smoke tests. README setup followed successfully on the local machine (2026-11-20). Module stubs are left to their own tasks |
 | [x] | P0-T02 | Environment & dependencies | | 2026-11-20 | Pinned Python 3.12 env; verified in a fresh cloud venv (CPU) and on the local machine with the GTX 1080 Ti: all imports OK, GPU matmul OK, 15/15 tests pass (Decision log #17) |
 | [x] | P0-T03 | CDSE credentials & connectivity | | 2026-11-20 | Local run: Catalog search over `ferlo_test`, Jan 2023 returned 6 scenes (tile 28PEC; cloud cover 0–98.7%, median 37.2%; 2 scenes < 10%). Ledger updated; 0 PU and 1 request charged |
-| [~] | M1-T01 | Document candidate sources | | 2026-11-20 | `reports/milestone1/sources.md` written from official docs (links, quotes, access date); builds to PDF with no warnings. **Pending: the project owner's personal-motivation sentences (marked TODO)**; aridity-index facts left `[VERIFY]` for M1-T02 |
+| [x] | M1-T01 | Document candidate sources | | 2026-11-20 | `reports/milestone1/sources.md`: both sources and the auxiliary datasets documented from official docs (links, quotes, access date), with the project owner's personal-motivation paragraph; builds to PDF with no warnings. Aridity-index facts left `[VERIFY]` for M1-T02 |
 | [ ] | M1-T02 | Select & validate AOIs | | | |
 | [ ] | M1-T03 | Feasibility & scale | | | |
 | [ ] | M1-T04 | Instructor discussion | | | Deferred, non-blocking |
@@ -789,7 +789,7 @@ Resolve these and move the answer to the Decision Log.
 6. *(Resolved 2026-11-20: quotas reset monthly, but the project is done within one month on the 30,000 / 30,000 allowance; Decision log #28.)*
 7. Global Aridity Index: version (v3?), resolution, licence and citation could not be read (figshare blocked automated access). *Verify in M1-T02 before use.*
 8. Trends.Earth licence: README says GPL v2.0 or later, but the repository also contains an Apache-2.0 file. *Verify before citing (only if used).*
-9. Personal motivation paragraph for the M1 report (in `reports/milestone1/sources.md` §1). *Owner: project owner.*
+9. *(Resolved 2026-11-20: personal-motivation paragraph added by the project owner.)*
 
 ---
 
