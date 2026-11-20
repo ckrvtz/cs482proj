@@ -700,8 +700,8 @@ Fill in owners and due dates. Tick tasks as they finish (`[x]`, date, note). `[~
 
 | ✓ | ID | Task | Owner | Due | Notes |
 |---|---|---|---|---|---|
-| [x] | P0-T01 | Scaffold repository | | 2026-11-20 | Layout, pyproject, config loader + validation, 9 smoke tests pass in a fresh venv. Teammate walkthrough of README still pending. Module stubs are left to their own tasks |
-| [~] | P0-T02 | Environment & dependencies | | 2026-11-20 | Pinned env built from scratch and verified on CPU (Linux, Python 3.12): imports, `pip check`, 15 tests, PDF build. **GPU check on the 1080 Ti still to run locally** (`python scripts/check_env.py --require-gpu`) |
+| [x] | P0-T01 | Scaffold repository | | 2026-11-20 | Layout, pyproject, config loader + validation, smoke tests. README setup followed successfully on the local machine (2026-11-20). Module stubs are left to their own tasks |
+| [x] | P0-T02 | Environment & dependencies | | 2026-11-20 | Pinned Python 3.12 env; verified in a fresh cloud venv (CPU) and on the local machine with the GTX 1080 Ti: all imports OK, GPU matmul OK, 15/15 tests pass (Decision log #17) |
 | [ ] | P0-T03 | CDSE credentials & connectivity | | | |
 | [ ] | M1-T01 | Document candidate sources | | | |
 | [ ] | M1-T02 | Select & validate AOIs | | | |
@@ -756,6 +756,7 @@ Append-only. Newest at the bottom. Every threshold, AOI bound, library choice, s
 | 14 | 2026-11-20 | Gradient boosting library: LightGBM (XGBoost not installed unless needed) | One GBM library keeps the env smaller; revisit in M3-T09 if needed | P0-T02 | M3-T09 |
 | 15 | 2026-11-20 | Reports: pandoc 3.1 + XeLaTeX (TeX Live 2023) via `scripts/build_pdf.sh`; tested with a figure, table, math and links. Engine overridable with `PDF_ENGINE` | Standard pandoc route; same on Linux (TeX Live) and Windows (MiKTeX) | P0-T02 | Reports |
 | 16 | 2026-11-20 | Created a personal cloud environment `cs482proj` allowing `download.pytorch.org` and `download-r2.pytorch.org` (PyTorch index and wheel host). `pypi.nvidia.com` stays blocked there; in the cloud sandbox install the `nvidia-*` deps from PyPI first | Needed to find and verify the torch build from cloud sessions; local machine unaffected | P0-T02 | Cloud sessions only |
+| 17 | 2026-11-20 | Local GPU machine verified: Fedora (kernel 7.3, glibc 2.43), Python 3.12.16, NVIDIA driver 580.196.07 (supports up to CUDA 13.0), GTX 1080 Ti, compute capability 6.1, 10.9 GB usable. `check_env.py --require-gpu`: all 30 imports OK at the pinned versions; torch 2.14.1+cu126 compiled for sm_50–sm_90 incl. sm_60; 2048×2048 matmul on cuda 110.7 ms (first call, includes warm-up), max abs GPU–CPU difference 5.19e-04; ALL CHECKS PASSED. pytest 15/15 | Closes P0-T02; confirms the cu126 build runs on the 1080 Ti | Project owner (local run) | M3-T10 |
 
 ---
 
@@ -768,7 +769,6 @@ Resolve these and move the answer to the Decision Log.
 3. Instructor feedback on scope, label strategy and whether weak labels are acceptable. *Deferred (M1-T04).*
 4. Group members for M3 and whether M1/M2 are individual or group submissions. *Deferred (M3-T01).*
 5. Whether `data/processed/` stays under ~50 MB or needs a GitHub Release asset. *Revisit after M1-T08.*
-6. Confirm the pinned torch build runs on the GTX 1080 Ti: run `python scripts/check_env.py --require-gpu` locally and record the output, driver version and the max CUDA version from `nvidia-smi` (driver must support CUDA 12.6). *Closes P0-T02.*
 
 ---
 
