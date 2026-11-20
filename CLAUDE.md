@@ -17,7 +17,7 @@ A CS482 data mining project: detect and predict **desertification** in dryland a
 4. Add or update `pytest` tests for every new pure function (index formulas, trend statistics, label rules, split logic, gridding).
 5. Run the tests and execute the notebooks you changed, top to bottom.
 6. Check **every** acceptance criterion in the task block. Report each as met or not met, with evidence (output, file path, number).
-7. Update `docs/ROADMAP.md`: tick the task in §10 with the date and a note, add non-obvious choices to §11 (Decision log, append-only), and add anything unresolved to §12.
+7. Update `docs/ROADMAP.md`: tick the task in §10 with the date and a note, add non-obvious choices to the Decision log in `docs/DECISIONS.md` (append-only), and add anything unresolved to §12.
 8. Commit with a message that starts with the task ID, e.g. `M1-T05: pilot extraction with caching and provenance`.
 
 If a task is ambiguous, or a decision is really the team's to make (AOI choice, label thresholds, scope changes), ask instead of guessing.
@@ -51,7 +51,7 @@ python scripts/check_secrets.py                                           # fail
 - `notebooks/NN_name.ipynb`: numbered workflow. `notebooks/final/desertification_pipeline.ipynb` is the graded M3 notebook.
 - `data/raw`, `data/interim`: gitignored. `data/processed`: parquet tables. `data/sample`, `data/labels`: small and committed.
 - `reports/figures`: generated figures. `reports/results`: metric CSVs. `reports/milestoneN/`: report drafts.
-- `docs/REFERENCES.md`: every citation (data, papers, libraries, reused code).
+- `docs/REFERENCES.md`: every citation (data, papers, libraries, reused code). `docs/DECISIONS.md`: the decision log (append-only).
 
 ## Code conventions
 
@@ -62,7 +62,7 @@ python scripts/check_secrets.py                                           # fail
 - Tabular data is pandas DataFrames saved as **parquet** with the exact column names and dtypes in ROADMAP §7. If you need a schema change, update §7 in the same commit.
 - Rasters: `rasterio`/`rioxarray`, GeoTIFF, **AOI UTM CRS**, CRS and transform always kept with the data.
 - Randomness: one global seed from config, passed explicitly (`random_state=`, `torch.manual_seed`, NumPy `Generator`).
-- Formatting/linting: `ruff`. Keep dependencies in `environment.yml`/`requirements.txt` pinned, and record new ones in the Decision log.
+- Formatting/linting: `ruff`. Keep dependencies in `environment.yml`/`requirements.txt` pinned, and record new ones in the Decision log (`docs/DECISIONS.md`).
 
 ## Notebook conventions
 

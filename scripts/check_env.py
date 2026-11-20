@@ -5,7 +5,7 @@ Usage (from the repository root, with the environment active):
     python scripts/check_env.py                # imports + versions + GPU if present
     python scripts/check_env.py --require-gpu  # also fail unless the GPU works (local machine)
 
-Exit code 0 means every check passed. Paste the output into the ROADMAP Decision log
+Exit code 0 means every check passed. Paste the output into the Decision log (docs/DECISIONS.md)
 when recording the working environment.
 """
 

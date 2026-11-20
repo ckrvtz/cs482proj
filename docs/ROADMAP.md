@@ -2,7 +2,7 @@
 
 > **Status:** living document. It is the single source of truth for scope, tasks and acceptance criteria.
 > **Companion file:** [`/CLAUDE.md`](../CLAUDE.md), which holds the standing rules for LLM-assisted development (coding conventions, data/API rules, integrity rules).
-> **Course requirements:** [`Milestone1.md`](Milestone1.md), [`Milestone2.md`](Milestone2.md), [`Milestone3.md`](Milestone3.md). If this roadmap and a milestone file disagree, **the milestone file wins**: fix the roadmap and log the change in the [Decision Log](#11-decision-log).
+> **Course requirements:** [`Milestone1.md`](Milestone1.md), [`Milestone2.md`](Milestone2.md), [`Milestone3.md`](Milestone3.md). If this roadmap and a milestone file disagree, **the milestone file wins**: fix the roadmap and log the change in the [Decision log](#11-decision-log).
 
 ---
 
@@ -19,7 +19,7 @@
 8. [Evaluation protocol](#8-evaluation-protocol)
 9. [Risks and mitigations](#9-risks-and-mitigations)
 10. [Status tracker](#10-status-tracker)
-11. [Decision log](#11-decision-log)
+11. [Decision log](#11-decision-log) → [`DECISIONS.md`](DECISIONS.md)
 12. [Open questions](#12-open-questions)
 13. [Prompt templates](#13-prompt-templates)
 14. [Starting reference list](#14-starting-reference-list)
@@ -39,7 +39,7 @@
 3. A task is done only when **every** acceptance criterion is met. If one can't be met, say which one and why. Don't quietly lower the bar.
 4. When you finish a task:
    - tick it in the [Status tracker](#10-status-tracker) (`[x]`), with the date and a one-line note;
-   - add any non-obvious choice you made (thresholds, AOI bounds, library choices, etc.) to the [Decision log](#11-decision-log);
+   - add any non-obvious choice you made (thresholds, AOI bounds, library choices, etc.) to the [Decision log](DECISIONS.md) (`docs/DECISIONS.md`);
    - add anything you couldn't resolve to [Open questions](#12-open-questions).
 5. Never invent data, results, metrics, API behaviour or citations. If you are unsure whether an API parameter or library function exists, check the official docs or the installed package source before using it, and say what you checked.
 
@@ -84,7 +84,7 @@ Most published desertification-trend work uses coarse sensors (AVHRR GIMMS at ab
 2. **Early-warning framing:** predicting *future* degradation from *earlier* observations, with strict temporal and spatial separation (no label leakage). This is a harder and more useful task than re-classifying the period the labels came from.
 3. **Honest generalisation tests:** leave-one-AOI-out evaluation, to show whether a model trained in one dryland transfers to another.
 
-Milestone 2 (§6, `M2-*`) must confirm these are actually new against the literature, and narrow or adjust them if they are not. Log any change in the Decision Log.
+Milestone 2 (§6, `M2-*`) must confirm these are actually new against the literature, and narrow or adjust them if they are not. Log any change in the Decision log.
 
 ---
 
@@ -148,7 +148,7 @@ Default **invalid** set for masking: `{0, 1, 2, 3, 8, 9, 10, 11}`. Water (6) is 
 
 **Known gotchas (read before writing any ingestion code)**
 1. **Processing baseline 04.00 offset (from 2022-01-25):** L2A digital numbers gained a `BOA_ADD_OFFSET` of −1000. Sentinel Hub *harmonises* values by default (the `harmonizeValues` processing option), so reflectances are comparable across the change. **Do not apply the offset yourself** unless harmonisation was turned off. Verify it once in `M1-T05`: a stable desert pixel should show no step change at 2022-01-25.
-2. **Bright desert surfaces can be misclassified as cloud** in SCL. Always store the **valid-observation count** per pixel/cell, and check composites over bright sand for holes. If a whole AOI loses too much data, log it and consider a looser mask (e.g. keep class 8) **for that AOI only**, documented in the Decision Log.
+2. **Bright desert surfaces can be misclassified as cloud** in SCL. Always store the **valid-observation count** per pixel/cell, and check composites over bright sand for holes. If a whole AOI loses too much data, log it and consider a looser mask (e.g. keep class 8) **for that AOI only**, documented in the Decision log.
 3. **Process API output size limit** is 2500 × 2500 px per request. Split larger AOIs into tiles (`sentinelhub.BBoxSplitter` / `UtmZoneSplitter`).
 4. **CRS:** request data in the AOI's **UTM zone** so pixels are square metres and cell areas are equal. Store the EPSG code with every file.
 5. **Multi-temporal requests cost more PUs** (cost grows with the number of acquisitions). Run a pilot (`M1-T05`) to measure PU cost per AOI-season before scaling up.
@@ -210,7 +210,7 @@ S2L2A_CDSE = DataCollection.SENTINEL2_L2A.define_from(
 
 ### 3.2 Second candidate source (needed for Milestone 1's "two sources")
 **Microsoft Planetary Computer STAC API** — `https://planetarycomputer.microsoft.com/api/stac/v1` (Python: `pystac-client` + `planetary-computer`). Free, read-only, no key needed for public collections. Relevant collections: Landsat Collection 2 Level-2 (record back to the 1980s, which gives historical context that Sentinel-2 can't), ESA WorldCover, Copernicus DEM. M1 has to document it as a real alternative with a sample pull, even if Sentinel Hub stays primary.
-*Fallback role:* if CDSE quota or outages block progress, Sentinel-2 L2A is also on Planetary Computer. Switching is a Decision Log entry, not a silent change.
+*Fallback role:* if CDSE quota or outages block progress, Sentinel-2 L2A is also on Planetary Computer. Switching is a Decision log entry, not a silent change.
 
 ### 3.3 Auxiliary data (features, labelling, stratification)
 
@@ -238,7 +238,7 @@ Document licence and citation for each one in `docs/REFERENCES.md` when you firs
 - Every request batch is logged in `data/api_usage_log.csv` (committed, small): date, task ID, API, request count, PU before/after from the dashboard, purpose.
 - Before a batch, compare the estimate against the remaining budget in that log. Stop and ask if a batch would push a row above its cap.
 
-**Data stays local.** The project runs on a local machine. Raw and interim data (`data/raw/`, `data/interim/`) live only on that machine, are gitignored, and are the cache that prevents duplicate API requests, so **never delete them without asking**. Keep a backup copy outside the repo (e.g. an external drive) once M1-T06 finishes. `data/processed/` is committed if it stays ≲ 50 MB; if it grows past that, a GitHub Release asset will be considered then (Decision Log entry). No commercial cloud hosting is planned.
+**Data stays local.** The project runs on a local machine. Raw and interim data (`data/raw/`, `data/interim/`) live only on that machine, are gitignored, and are the cache that prevents duplicate API requests, so **never delete them without asking**. Keep a backup copy outside the repo (e.g. an external drive) once M1-T06 finishes. `data/processed/` is committed if it stays ≲ 50 MB; if it grows past that, a GitHub Release asset will be considered then (Decision log entry). No commercial cloud hosting is planned.
 
 ---
 
@@ -314,7 +314,7 @@ There is no ready-made, pixel-level ground truth for desertification. We build *
 3. Take the residual series `ε_t`; estimate its **Theil–Sen slope** and run a **Mann–Kendall** test. With only 7 annual points the test has little power, so prefer the **seasonal Mann–Kendall on monthly residuals** from `cell_monthly`. Record which variant was used.
 4. Do the same trend analysis on BSI and albedo (no rainfall adjustment needed).
 
-**Step C — 3-class label (v1; thresholds tuned once and then frozen, see Decision Log):**
+**Step C — 3-class label (v1; thresholds tuned once and then frozen, see Decision log):**
 - `degrading` — residual vegetation slope < 0 with p < α **and** (BSI slope > 0 **or** albedo slope > 0)
 - `improving` — residual vegetation slope > 0 with p < α
 - `stable` — everything else
@@ -404,6 +404,7 @@ cs482proj/
 ├── tests/                        # pytest unit tests (indices, trends, splits, labels)
 └── docs/
     ├── ROADMAP.md  Milestone1-3.md
+    ├── DECISIONS.md              # decision log (append-only)
     └── REFERENCES.md             # all citations (data, papers, libraries, code reused)
 ```
 
@@ -427,10 +428,10 @@ M1 wk1 | Depends on: — | Owner: TBD
 M1 wk1 | Depends on: P0-T01
 **Goal:** a pinned, reproducible environment on the **local machine with an NVIDIA GTX 1080 Ti** (Pascal, compute capability 6.1, 11 GB VRAM). Colab is an optional fallback only.
 **Outputs:** `environment.yml` (and/or `requirements.txt`) with pinned versions; GPU setup notes in README; `scripts/build_pdf.sh` (Markdown → PDF with pandoc, see M1-T10).
-**GPU note:** recent PyTorch/CUDA builds have been dropping older GPU architectures. Pick a PyTorch + CUDA combination whose `torch.cuda.get_arch_list()` covers compute capability 6.1 (`sm_60` or `sm_61` kernels, or older-or-equal `compute_6x` PTX), and check it actually runs a tensor operation on the GPU. Don't assume the latest wheel works. Record the working combination in the Decision Log.
+**GPU note:** recent PyTorch/CUDA builds have been dropping older GPU architectures. Pick a PyTorch + CUDA combination whose `torch.cuda.get_arch_list()` covers compute capability 6.1 (`sm_60` or `sm_61` kernels, or older-or-equal `compute_6x` PTX), and check it actually runs a tensor operation on the GPU. Don't assume the latest wheel works. Record the working combination in the Decision log.
 **Report tooling:** `pandoc` plus a PDF engine (e.g. `xelatex` from TeX Live). Record the versions.
 **Core packages:** `sentinelhub`, `numpy`, `pandas`, `pyarrow`, `xarray`, `rioxarray`, `rasterio`, `geopandas`, `shapely`, `pyproj`, `scipy`, `statsmodels`, `pymannkendall`, `scikit-learn`, `imbalanced-learn`, `lightgbm` (or `xgboost`), `torch`, `shap`, `optuna` (optional), `matplotlib`, `seaborn`, `folium` or `leafmap`, `pystac-client`, `planetary-computer`, `python-dotenv`, `pyyaml`, `tqdm`, `jupyter`, `nbconvert`, `papermill`, `pytest`, `ruff`.
-**Acceptance:** env builds from scratch · `python -c "import sentinelhub, sklearn, torch, geopandas"` works · `torch.cuda.is_available()` is `True` and a small matrix multiply runs on the 1080 Ti · `scripts/build_pdf.sh` turns a test Markdown file with a figure into a PDF · versions recorded in the Decision Log.
+**Acceptance:** env builds from scratch · `python -c "import sentinelhub, sklearn, torch, geopandas"` works · `torch.cuda.is_available()` is `True` and a small matrix multiply runs on the 1080 Ti · `scripts/build_pdf.sh` turns a test Markdown file with a figure into a PDF · versions recorded in the Decision log.
 
 #### P0-T03 — CDSE credentials and connectivity check
 M1 wk1 | Depends on: P0-T02
@@ -467,13 +468,13 @@ M1 wk1 | Depends on: M1-T02
 M1 wk2 | Depends on: M1-T01..T03 · **Deferred (2026-11-20): not blocking; development goes ahead without it**
 **Goal:** get feedback on the source and project idea.
 **Outputs:** `reports/milestone1/instructor_discussion.md`: date, attendees, questions asked, feedback received, decision made.
-**Acceptance:** the decision and any scope changes are copied into the Decision Log, and this roadmap is updated if needed. *(People do this task; an LLM may only help prepare the questions.)*
+**Acceptance:** the decision and any scope changes are copied into the Decision log, and this roadmap is updated if needed. *(People do this task; an LLM may only help prepare the questions.)*
 
 #### M1-T05 — Pilot extraction (one AOI, one season)
 M1 wk2 | Depends on: P0-T03, M1-T02
 **Goal:** working, cached, provenance-tracked extraction for a small request, plus a measured PU cost.
 **Outputs:** `src/desertification/evalscripts/median_composite.js`; `src/desertification/ingest.py` (`download_composite(aoi_id, start, end, resolution) -> Path`); GeoTIFF in `data/raw/<aoi_id>/<start>_<end>_<res>m.tif` plus a JSON sidecar (request params, evalscript hash, timestamp, CRS, sentinelhub version); section in `notebooks/02_ingestion.ipynb`.
-**Steps:** implement the request (UTM CRS, 20 m) → cache: skip the download if the file and a matching sidecar already exist → download one AOI × one season → plot true colour + NDVI + valid-count band → record the PU used (from the dashboard) in `data/api_usage_log.csv` and the per-request cost in the Decision Log.
+**Steps:** implement the request (UTM CRS, 20 m) → cache: skip the download if the file and a matching sidecar already exist → download one AOI × one season → plot true colour + NDVI + valid-count band → record the PU used (from the dashboard) in `data/api_usage_log.csv` and the per-request cost in the Decision log.
 **Acceptance:** re-running does **not** hit the API again (cache works) · valid-count band looks sensible (no large holes over bright sand; if there are, see gotcha #2) · reflectances fall in a plausible 0–1 range · harmonisation check across 2022-01-25 done on a stable target (gotcha #1).
 
 #### M1-T06 — Scaled extraction
@@ -528,7 +529,7 @@ M2 wk1 | Depends on: M2-T01
 #### M2-T03 — Position our contribution
 M2 wk1–2 | Depends on: M2-T01
 **Goal:** confirm or revise §1.4 against what already exists.
-**Outputs:** updates to §1.4 and the Decision Log; a "Proposed extensions" section draft.
+**Outputs:** updates to §1.4 and the Decision log; a "Proposed extensions" section draft.
 **Acceptance:** each claimed contribution names the closest prior work and says concretely how ours differs.
 
 #### M2-T04 — Milestone 2 report (2–3 pages)
@@ -570,7 +571,7 @@ M3 wk2 | Depends on: M3-T04
 M3 wk2 | Depends on: M3-T03, M3-T04
 **Outputs:** `splits.py`; `data/processed/splits.parquet` (cell_id, spatial_block_id, fold, is_test).
 **Steps:** assign spatial blocks (e.g. 2 km × 2 km; larger than the range of spatial autocorrelation — estimate it with a variogram or correlogram on NDVI) → hold out a **test set** (e.g. 20% of blocks, stratified by AOI and label; plus the leave-one-AOI-out protocol) → build `StratifiedGroupKFold` folds on the rest.
-**Acceptance:** no block appears in both train and test · test-set hash recorded in the Decision Log · a test proves no cell_id overlap.
+**Acceptance:** no block appears in both train and test · test-set hash recorded in the Decision log · a test proves no cell_id overlap.
 
 #### M3-T07 — Class imbalance analysis
 M3 wk2 | Depends on: M3-T06
@@ -684,7 +685,7 @@ Keys + early-period features (§4.4) + static `cells` attributes. **No** columns
 
 | Risk | Impact | Mitigation |
 |---|---|---|
-| PU/request quota (30,000 each) runs out | Ingestion stalls | Budget caps in §3.4; usage ledger; pilot first (M1-T05); cache everything; coarser monthly resolution; fewer AOIs; Planetary Computer fallback (Decision Log entry) |
+| PU/request quota (30,000 each) runs out | Ingestion stalls | Budget caps in §3.4; usage ledger; pilot first (M1-T05); cache everything; coarser monthly resolution; fewer AOIs; Planetary Computer fallback (Decision log entry) |
 | Bright desert misclassified as cloud by SCL | Data holes, biased composites | Track valid counts; per-AOI mask tweak; visual QA |
 | Weak labels are circular or noisy | Inflated or meaningless scores | Strict early/late separation; manual validation sample; report label uncertainty |
 | Spatial autocorrelation leakage | Over-optimistic metrics | Spatial blocks + leave-one-AOI-out |
@@ -742,44 +743,13 @@ Fill in owners and due dates. Tick tasks as they finish (`[x]`, date, note). `[~
 
 ## 11. Decision log
 
-Append-only. Newest at the bottom. Every threshold, AOI bound, library choice, scope change or deviation from this roadmap goes here.
-
-| # | Date | Decision | Rationale | Made by | Affects |
-|---|---|---|---|---|---|
-| 1 | 2026-11-20 | Primary data: Sentinel-2 L2A via Sentinel Hub on CDSE; unit of analysis 100 m cells; study period 2019–2025 | Free access, 10–20 m resolution, harmonised L2A; cells give a tabular dataset far above the size requirement | Initial roadmap | All |
-| 2 | 2026-11-20 | Main ML task framed as early-period → late-period degradation prediction with spatial CV | Avoids label leakage; gives a novel early-warning angle | Initial roadmap | M3 |
-| 3 | 2026-11-20 | Compute: local machine with NVIDIA GTX 1080 Ti is primary; Colab only as fallback | Keeps large imagery local, avoids duplicate downloads and commercial hosting | Project owner | P0-T02, M3-T10, M3-T14 |
-| 4 | 2026-11-20 | Data hosting: raw/interim data local only; processed data committed if ≲ 50 MB; GitHub Release considered later only if needed | Reduce reliance on hosting and repeated API calls | Project owner | §3.4, M3-T14 |
-| 5 | 2026-11-20 | CDSE quota: 30,000 PU and 30,000 requests available; budget caps in §3.4; usage logged in `data/api_usage_log.csv` | Quota is finite; ingestion must be planned | Project owner | M1-T05, M1-T06 |
-| 6 | 2026-11-20 | Reports written in Markdown and converted to PDF with pandoc (`scripts/build_pdf.sh`) | Works alongside the notebooks and lives in git | Project owner | M1-T10, M2-T04, M3-T14 |
-| 7 | 2026-11-20 | Instructor discussion and group membership deferred; development proceeds without them | Not needed to start technical work | Project owner | M1-T04, M3-T01 |
-| 8 | 2026-11-20 | Packaging: setuptools `src/` layout in `pyproject.toml`; runtime deps for now only `pyyaml`, `python-dotenv` (dev extra: `pytest`, `ruff`); ruff line length 100 | Keeps P0-T01 small; the full pinned stack is P0-T02's job | P0-T01 | All code |
-| 9 | 2026-11-20 | `config/project.yaml` holds the roadmap's periods, grid, S2 bands/SCL mask, quota caps, label defaults and paths; global seed = 482. `desertification.config.validate_config` rejects overlapping early/gap/late periods, a cell size that isn't a multiple of the pixel size, and PU caps above the total | Puts the leakage and quota rules in code, not just in docs | P0-T01 | All tasks |
-| 10 | 2026-11-20 | Project root found via `DESERT_PROJECT_ROOT`, else the cwd and its parents, else the package location | Notebooks run from `notebooks/` and tests from the repo root both find the config | P0-T01 | All code |
-| 11 | 2026-11-20 | Only `__init__.py` and `config.py` created in `src/desertification/`; the other modules in §5 are created by the tasks that implement them | Avoids empty placeholder modules | P0-T01 | §5 |
-| 12 | 2026-11-20 | Python 3.12. Pins in `requirements.txt` (top-level packages, exact versions resolved together, `pip check` clean) and `requirements-torch.txt`; `environment.yml` (conda-forge, `python=3.12`) installs the same pip files | One set of pins for conda and venv users | P0-T02 | All |
-| 13 | 2026-11-20 | torch `2.14.1+cu126` from the PyTorch CUDA 12.6 index. Checked by reading `libtorch_cuda.so` from the wheel: compiled for sm_50, sm_60, sm_70, sm_75, sm_80, sm_86, sm_90. sm_60 binaries run on the 1080 Ti (6.1). The cu126 index was the only one with Pascal-era builds up to 2.14.1 (cu128 stops at 2.11.0); cu130 not used | Newest build we could confirm has Pascal kernels | P0-T02 | M3-T10 |
-| 14 | 2026-11-20 | Gradient boosting library: LightGBM (XGBoost not installed unless needed) | One GBM library keeps the env smaller; revisit in M3-T09 if needed | P0-T02 | M3-T09 |
-| 15 | 2026-11-20 | Reports: pandoc 3.1 + XeLaTeX (TeX Live 2023) via `scripts/build_pdf.sh`; tested with a figure, table, math and links. Engine overridable with `PDF_ENGINE` | Standard pandoc route; same on Linux (TeX Live) and Windows (MiKTeX) | P0-T02 | Reports |
-| 16 | 2026-11-20 | Created a personal cloud environment `cs482proj` allowing `download.pytorch.org` and `download-r2.pytorch.org` (PyTorch index and wheel host). `pypi.nvidia.com` stays blocked there; in the cloud sandbox install the `nvidia-*` deps from PyPI first | Needed to find and verify the torch build from cloud sessions; local machine unaffected | P0-T02 | Cloud sessions only |
-| 17 | 2026-11-20 | Local GPU machine verified: Fedora (kernel 7.3, glibc 2.43), Python 3.12.16, NVIDIA driver 580.196.07 (supports up to CUDA 13.0), GTX 1080 Ti, compute capability 6.1, 10.9 GB usable. `check_env.py --require-gpu`: all 30 imports OK at the pinned versions; torch 2.14.1+cu126 compiled for sm_50–sm_90 incl. sm_60; 2048×2048 matmul on cuda 110.7 ms (first call, includes warm-up), max abs GPU–CPU difference 5.19e-04; ALL CHECKS PASSED. pytest 15/15 | Closes P0-T02; confirms the cu126 build runs on the 1080 Ti | Project owner (local run) | M3-T10 |
-| 18 | 2026-11-20 | CDSE endpoints (base URL, token URL, collection name) and the P0-T03 test area live in `config/project.yaml`. Test area `ferlo_test`: [-14.55, 15.45, -14.45, 15.55] (~11 × 11 km near the Ferlo candidate AOI), January 2023 (dry season). It is a connectivity test, not a study AOI | No hard-coded endpoints or places; small, mostly cloud-free month gives a quick yes/no | P0-T03 | P0-T03 |
-| 19 | 2026-11-20 | API results are cached as JSON with a `<file>.meta.json` sidecar holding the request parameters, their SHA-256, UTC timestamp and sentinelhub version; a cache hit requires a matching hash. Catalog cache: `data/raw/catalog/` (local only). API calls also need an explicit `allow_api=True` / `ALLOW_API_CALLS = True` | Avoids duplicate requests and stale results; makes quota spending deliberate | P0-T03 | All ingestion |
-| 20 | 2026-11-20 | Quota ledger `data/api_usage_log.csv` columns: date, task_id, api, budget_category (§3.4 rows), request_count, pu_before/after, requests_before/after (dashboard readings, may be blank), purpose. Starts with a 30,000 / 30,000 balance row. `usage.check_cap` tests a planned batch against its category cap | Puts the §3.4 budget into code | P0-T03 | M1-T05, M1-T06 |
-| 21 | 2026-11-20 | `scripts/check_secrets.py`: compares `.env` values (≥ 8 chars) with every tracked or not-ignored file, including notebook outputs; prints file names only. Run before committing anything produced with credentials loaded | Checks the "no secret in committed files or outputs" rule mechanically | P0-T03 | All |
-| 22 | 2026-11-20 | P0-T03 result (local run): 6 Sentinel-2 L2A scenes over `ferlo_test` in Jan 2023, all on MGRS tile 28PEC. Dashboard: PU 30,000 → 30,000, requests 30,000 → 29,999. So **a one-page Catalog search costs 1 request and 0 PU, and the OAuth token request is not charged**. The ledger's `request_count` counts every HTTP call we make (logged 2 = token + 1 Catalog page); the charged amount is the difference of the dashboard readings | Catalog checks are effectively free, so availability checks (M1-T02) can be done freely within reason; budget planning should use dashboard differences, not `request_count` | P0-T03 (project owner's run) | M1-T02, M1-T05, M1-T06 |
-| 23 | 2026-11-20 | M1-T01: Sentinel Hub on CDSE stays the primary source; Microsoft Planetary Computer STAC is secondary: open 30 m DEM, WorldCover, a Sentinel-2 fallback, and optional Landsat context back to 1982. PC's docs call it a "Preview" with no service-level commitment | Server-side compositing and harmonised L2A keep downloads small; PC needs no account or quota but would mean downloading and processing whole scenes ourselves | M1-T01 | Ingestion |
-| 24 | 2026-11-20 | Use **CHIRPS v3**, not v2. CHC states v2 production ends after December 2026. v3 covers 60°N–60°S, 1981–present, CC BY 4.0; cite the data DOI 10.15780/G2JQ0P and Funk et al. (2026) Sci Data 13:718 | Continuity, and wider latitude coverage | M1-T01 | M1-T07, labels |
-| 25 | 2026-11-20 | DEM from Planetary Computer `cop-dem-glo-30`, not CDSE: CDSE restricts COPERNICUS_30 to authorized user categories and defaults to 90 m | 30 m slope is closer to our 20 m pixel grid; costs no CDSE quota | M1-T01 | M1-T07 |
-| 26 | 2026-11-20 | Official CDSE Processing Unit rules: 1 PU = 512 × 512 px × 3 input bands × 1 data sample, ≤ 16-bit output; 32-bit float output ×2; cost × number of data samples; minimum 0.005 PU per Process request and 0.01 per Statistical request; only successful requests are charged. So a multi-date median evalscript with FLOAT32 output is far costlier than a single scene. M1-T05 must measure it and consider UINT16 output (reflectance × 10000) | Avoids blowing the PU budget on composites | M1-T01 | M1-T05, M1-T06 |
-| 27 | 2026-11-20 | Cloud environment `cs482proj` now also allows 13 documentation hosts (CDSE docs/terms, sentinels.copernicus.eu, spacedata.copernicus.eu, planetarycomputer.microsoft.com, CHC/CHIRPS, esa-worldcover.org, registry.opendata.aws, figshare.com, unstats.un.org, unccd.int, trends.earth). Pages were read with curl and pandoc (the web-fetch tool still could not resolve them); Planetary Computer docs were read from their GitHub sources because the site renders with JavaScript | Needed to cite official sources in M1-T01; local machine unaffected | M1-T01 | Cloud sessions only |
-| 28 | 2026-11-20 | Quotas reset monthly (confirmed by the project owner), but the project will be completed within one month, so **all CDSE usage must fit in 30,000 PU / 30,000 requests in total**. The §3.4 caps are whole-project caps. Scope is revised from the usage ledger as work proceeds, starting with the M1-T05 pilot | Matches the project timeline; prevents planning around a reset that won't come | Project owner | §3.4, M1-T05, M1-T06, M3 |
+Moved to [`docs/DECISIONS.md`](DECISIONS.md) (append-only, numbered entries). References like "Decision log #22" elsewhere in this roadmap point there.
 
 ---
 
 ## 12. Open questions
 
-Resolve these and move the answer to the Decision Log.
+Resolve these and record the answer in [`DECISIONS.md`](DECISIONS.md).
 
 1. Final AOI list and bounding boxes. *To be settled in M1-T02.*
 2. PU cost per Process API request. *Measure in M1-T05.* (Catalog cost answered in Decision log #22.)
@@ -803,7 +773,7 @@ Read CLAUDE.md, then docs/ROADMAP.md §1–§5 and task <TASK-ID>.
 Implement <TASK-ID> exactly as specified. Put reusable logic in src/desertification/,
 keep notebooks thin, and add unit tests for any new pure function.
 Before finishing: check every acceptance criterion and report each one as met / not met (with evidence).
-Then update the Status tracker, Decision log and Open questions in ROADMAP.md.
+Then update the Status tracker and Open questions in ROADMAP.md, and the Decision log in docs/DECISIONS.md.
 Do not call the Sentinel Hub API beyond <N> requests without asking me first.
 ```
 

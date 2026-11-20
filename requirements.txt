@@ -1,7 +1,7 @@
 # Pinned project environment (P0-T02). Python 3.12.
 # Install order (see README): requirements-torch.txt first, then this file, then `pip install -e ".[dev]"`.
 # Versions were resolved together and checked with `pip check` on 2026-11-20.
-# Change a pin only deliberately, re-run the checks in README, and log it in docs/ROADMAP.md §11.
+# Change a pin only deliberately, re-run the checks in README, and log it in docs/DECISIONS.md.
 
 # --- Sentinel Hub / CDSE and STAC access ---
 sentinelhub==3.12.1
