@@ -787,7 +787,7 @@ Implement <TASK-ID> exactly as specified. Put reusable logic in src/desertificat
 keep notebooks thin, and add unit tests for any new pure function.
 Before finishing: check every acceptance criterion and report each one as met / not met (with evidence).
 Then update the Status tracker and Open questions in ROADMAP.md, and the Decision log in docs/DECISIONS.md.
-Do not call the Sentinel Hub API beyond <N> requests without asking me first.
+Do not call the Sentinel Hub API without asking me first.
 ```
 
 **Review a task's output**
