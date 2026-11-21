@@ -339,38 +339,41 @@ def plot_image_grid(
     -------
     matplotlib.figure.Figure
     """
+    import textwrap
+
     import matplotlib.pyplot as plt
 
     apply_style()
     ids = list(images)
-    cols = list(dict.fromkeys(c for d in images.values() for c in d))
+    periods = list(dict.fromkeys(c for d in images.values() for c in d))
+    # Landscape: one column per AOI, one row per period (fits a report page).
     fig, axes = plt.subplots(
-        len(ids), len(cols), figsize=(3.2 * len(cols), 3.2 * len(ids)), squeeze=False
+        len(periods), len(ids), figsize=(2.2 * len(ids), 2.45 * len(periods) + 0.6), squeeze=False
     )
-    for r, aoi_id in enumerate(ids):
-        for c, col in enumerate(cols):
+    for c, aoi_id in enumerate(ids):
+        for r, period in enumerate(periods):
             ax = axes[r][c]
             ax.grid(False)
             ax.set_xticks([])
             ax.set_yticks([])
-            img = images[aoi_id].get(col)
+            img = images[aoi_id].get(period)
             if img is not None:
                 ax.imshow(img[..., :3])
             else:
                 ax.text(0.5, 0.5, "not downloaded", ha="center", va="center", color=INK_2)
             if r == 0:
-                ax.set_title(col)
+                ax.set_title(textwrap.fill(titles.get(aoi_id, aoi_id), 22), fontsize=8)
             if c == 0:
-                ax.set_ylabel(titles.get(aoi_id, aoi_id), fontsize=8, color=INK)
+                ax.set_ylabel(period, fontsize=8, color=INK)
     fig.suptitle("True-colour views of each AOI (least-cloudy image in the dry season)", color=INK)
     fig.text(
         0.01,
-        -0.01,
+        0.005,
         f"Contains modified Copernicus Sentinel data {years_label}, processed "
         "by Sentinel Hub. Each image is ~20 km across, 60 m pixels.",
         fontsize=7,
         color=INK_2,
     )
-    fig.tight_layout()
-    _save(fig, out_path)
+    fig.tight_layout(rect=(0, 0.03, 1, 0.97))
+    _save(fig, out_path, dpi=150)
     return fig

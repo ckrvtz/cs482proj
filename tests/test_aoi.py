@@ -465,3 +465,15 @@ def test_partial_arrays_round_trip(tmp_path):
         2.0,
         3.0,
     ]
+
+
+def test_estimate_catalog_pu_follows_cdse_rules():
+    from desertification.usage import estimate_catalog_pu
+
+    assert estimate_catalog_pu(400, 1) == pytest.approx(0.01)  # P0-T03: small box, one month
+    assert estimate_catalog_pu(400, 12) == pytest.approx(0.12)  # M1-T02: one year per search
+    assert estimate_catalog_pu(400, 11.2) == pytest.approx(0.12)  # months rounded up
+    assert estimate_catalog_pu(2e6, 1) == pytest.approx(1.0)  # capped at 1 PU
+    assert estimate_catalog_pu(5e5, 3) == pytest.approx(1.0)  # 0.5 x 3 = 1.5 -> cap
+    with pytest.raises(ValueError):
+        estimate_catalog_pu(0, 1)

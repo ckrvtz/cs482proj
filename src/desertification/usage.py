@@ -248,3 +248,31 @@ def estimate_process_pu(
     area = max(0.01, width_px * height_px / 512**2)
     pu = area * (n_input_bands / 3) * n_samples * (2 if float32 else 1)
     return max(pu, 0.01 if statistical else 0.005)
+
+
+def estimate_catalog_pu(area_km2: float, months: float) -> float:
+    """Estimate the processing units (PU) of one Catalog API request (data querying).
+
+    CDSE rules (Processing Unit page, "Data querying"): 1 PU = 1 000 000 km² × up to one
+    month. Area factor = area / 1e6 km² (minimum 0.01); time factor = number of months,
+    rounded up; cost per request is at least 0.01 and at most 1 PU. Each results page is a
+    separate request.
+
+    Parameters
+    ----------
+    area_km2 : float
+        Area of the search bounding box in km².
+    months : float
+        Length of the search time window in months (rounded up).
+
+    Returns
+    -------
+    float
+        Estimated PU per request (page).
+    """
+    import math
+
+    if area_km2 <= 0 or months <= 0:
+        raise ValueError("area_km2 and months must be positive")
+    cost = max(0.01, area_km2 / 1e6) * math.ceil(months)
+    return min(1.0, max(0.01, cost))
