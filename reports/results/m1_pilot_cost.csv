@@ -1,4 +1,5 @@
 request,bands,projected_pu,reported_pu,dashboard_total_pu
-composite b10,10,42.0,42.83587230702324,43
-composite c6,6,26.7,27.259189948836138,43
-statistics (harmonisation),4,0.4,,43
+composite b10,10,42.0,,18
+composite c6,6,26.7,,18
+composite c6 low-cloud (max cloud 40%),6,12.8,17.801919966586865,18
+statistics (harmonisation),4,0.4,,18
