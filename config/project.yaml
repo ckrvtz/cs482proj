@@ -63,7 +63,6 @@ pilot:
   low_cloud_test:             # does a scene cloud filter cut the charged samples? (open question 12)
     design: c6
     max_cloud_cover: 0.4       # = aoi_selection.usable_cloud_pct / 100
-  monthly_bands: [B02, B04, B08, B11, B12]   # monthly series inputs: NDVI, MSAVI2, BSI, albedo (+ SCL)
   harmonisation:
     aoi_id: erg                # stable bright sand
     window_m: 1000
@@ -74,6 +73,16 @@ pilot:
     cutoff: "2022-01-25"       # processing baseline 04.00 (BOA_ADD_OFFSET -1000)
     bands: [B02, B04, B08, B11]
     tolerance: 0.02            # max |median same-month step| in reflectance; an unharmonised offset is ~0.1
+
+# Full extraction design (M1-T06), chosen by the project owner after the pilot (Decision log #51).
+# Projected ~19,200 PU for everything below (reports/results/m1_pu_plan_options.csv).
+extraction:
+  window_m: 10000              # centred 10 km x 10 km window inside each validated 20 km AOI square
+  resolution_m: 20
+  max_cloud_cover: 0.4         # scene filter: only acquisitions with tile cloud cover <= 40 % (Decision log #50)
+  sample_type: UINT16          # reflectance x 10000 + valid count (Decision log #45)
+  seasonal_bands: [B02, B03, B04, B05, B06, B07, B08, B8A, B11, B12]   # "b10": all of sentinel2.bands
+  monthly_bands: [B02, B04, B08, B11, B12]   # NDVI, MSAVI2, BSI, albedo (+ SCL)
 
 # Open climate data on the Climate Hazards Center server (no account, no quota).
 climate_data:

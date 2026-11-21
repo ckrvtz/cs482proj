@@ -278,7 +278,8 @@ Each period's start and end live in `config/project.yaml`; nothing hard-codes ye
   - `cell_season` — one row per cell × year × season (spectral composites + indices). **This is the main M1 table.**
   - `cell_monthly` — one row per cell × month (a few indices only) for trend analysis.
   - `cell_model` — one row per cell (early-period features + late-period label) for supervised modelling.
-- **Size check:** one 20 km AOI at 100 m = 200 × 200 = **40,000 cells**. Even one AOI × 7 years × 2 seasons gives 560,000 `cell_season` rows with 25+ attributes, far above the ≥10,000 × ≥15 requirement. Several AOIs leave room to subsample.
+- **Extraction window:** data are extracted for a centred **10 km × 10 km window** inside each validated 20 km AOI square (`extraction.window_m`; chosen after the pilot to fit the PU budget, Decision log #51).
+- **Size check:** one 10 km window at 100 m = 100 × 100 = **10,000 cells**; 6 AOIs give 810,000 `cell_season` rows with 34 attributes (`reports/results/m1_feasibility.csv`), far above the ≥10,000 × ≥15 requirement.
 
 ### 4.4 Features
 **Spectral (per cell-season):** mean and standard deviation (within-cell) of B02–B12 median reflectances; valid-observation count; valid-pixel fraction.
@@ -771,7 +772,7 @@ Resolve these and record the answer in [`DECISIONS.md`](DECISIONS.md).
 9. *(Resolved 2026-11-20: personal-motivation paragraph added by the project owner.)*
 10. *(Resolved 2026-11-21: M1-T02 Catalog and true-colour checks run locally; 108 requests, 18 PU; Decision log #39, #40.)*
 11. *(Resolved 2026-11-21: final six AOIs confirmed by the project owner after re-checking the moved Urmia and Kubuqi squares; Decision log #41–#43.)*
-12. **Extraction design vs. PU budget:** all measurements are in (Decision log #47–#50): the cost model is accurate to ×1.02; a low-cloud filter (tile cloud ≤ 40 %) cuts cost by about a third at the Aral Sea but ~11 % over all AOIs, with negligible data change. Whole-plan options with 10 km squares (`reports/results/m1_pu_plan_options.csv`): c6 + 100 m monthly ≈ 7 000–7 900 PU; b10 + 100 m ≈ 10 900–12 200; c6 + 20 m ≈ 15 400–17 300; b10 + 20 m ≈ 19 200–21 700 (only the last, unfiltered, exceeds the 20 000 cap). Remaining choices: (a) b10 vs c6 (c6 drops B05–B07 and B8A: a §7.2 schema change), (b) monthly series at 20 m or 100 m (100 m samples one pixel per cell, no within-cell spread), (c) low-cloud filter on or off; also whether to keep 20 km squares (only fits with the cheapest options and fewer AOIs/years). *Owner decides before M1-T06.*
+12. *(Resolved 2026-11-21: b10 seasonal composites + 20 m monthly series + low-cloud filter, 16-bit, on centred 10 km windows; ≈ 19 200 PU projected for 585 requests; Decision log #51.)*
 
 ---
 

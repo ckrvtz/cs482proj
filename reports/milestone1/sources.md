@@ -67,19 +67,19 @@ As climate change continues to accelerate and ravage our natural world, I believ
 
 **Decision:** keep **Sentinel Hub on CDSE as the primary source** for Sentinel-2 L2A. Server-side compositing and cloud masking keep downloads small enough to fit the quota, and values are harmonised across the 2022 processing-baseline change. **Planetary Computer is the secondary source**: it supplies the open 30 m DEM and WorldCover, it is a fallback for Sentinel-2 if the quota runs out, and Landsat gives optional long-term context.
 
-**Feasibility of size (at least 10 000 records with 15 attributes; M1-T03).** Each AOI in `config/aois.geojson` is a 20 km × 20 km UTM square, i.e. 200 × 200 = 40 000 cells of 100 m (5 × 5 pixels at 20 m). The main table, `cell_season`, has one record per cell, year and season; only seasons lying entirely inside 2019–2025 are counted, so AOIs whose wet or dry season crosses the year end contribute 6 rather than 7 of that season.
+**Feasibility of size (at least 10 000 records with 15 attributes; M1-T03).** Data are extracted for a centred 10 km × 10 km window inside each validated 20 km AOI square (`config/aois.geojson`; window size chosen after the pilot to fit the processing budget), i.e. 100 × 100 = 10 000 cells of 100 m (5 × 5 pixels at 20 m). The main table, `cell_season`, has one record per cell, year and season; only seasons lying entirely inside 2019–2025 are counted, so AOIs whose wet or dry season crosses the year end contribute 6 rather than 7 of that season.
 
 | AOI | Cells (100 m) | Wet seasons | Dry seasons | `cell_season` records | `cell_monthly` records |
 |---|---|---|---|---|---|
-| Aral Sea | 40 000 | 6 | 7 | 520 000 | 3 360 000 |
-| Ferlo | 40 000 | 7 | 7 | 560 000 | 3 360 000 |
-| Fakara | 40 000 | 7 | 6 | 520 000 | 3 360 000 |
-| Kubuqi | 40 000 | 7 | 6 | 520 000 | 3 360 000 |
-| Lake Urmia | 40 000 | 7 | 7 | 560 000 | 3 360 000 |
-| Grand Erg | 40 000 | 7 | 7 | 560 000 | 3 360 000 |
-| **Total** | **240 000** | 41 | 40 | **3 240 000** | **20 160 000** |
+| Aral Sea | 10 000 | 6 | 7 | 130 000 | 840 000 |
+| Ferlo | 10 000 | 7 | 7 | 140 000 | 840 000 |
+| Fakara | 10 000 | 7 | 6 | 130 000 | 840 000 |
+| Kubuqi | 10 000 | 7 | 6 | 130 000 | 840 000 |
+| Lake Urmia | 10 000 | 7 | 7 | 140 000 | 840 000 |
+| Grand Erg | 10 000 | 7 | 7 | 140 000 | 840 000 |
+| **Total** | **60 000** | 41 | 40 | **810 000** | **5 040 000** |
 
-That is **3 240 000 `cell_season` records**; the smallest AOI alone gives 520 000. Each record has **34 attributes** (24 without the optional within-cell standard deviations), defined in `desertification.schema` and checked by a unit test against ROADMAP §7.2:
+That is **810 000 `cell_season` records**; the smallest AOI alone gives 130 000. Each record has **34 attributes** (24 without the optional within-cell standard deviations), defined in `desertification.schema` and checked by a unit test against ROADMAP §7.2:
 
 | Group | Columns |
 |---|---|
@@ -137,7 +137,9 @@ Adding the monthly index series (16-bit, 10 km squares; at 20 m or at 100 m, i.e
 | b10 | 20 m | low-cloud only (measured) | 10 528 | 8 675 | 19 203 | 0.96 |
 | b10 | 20 m | all | 11 849 | 9 808 | 21 657 | 1.08 |
 
-Sources: `reports/results/m1_pilot_cost.csv`, `m1_pilot_qa.csv`, `m1_harmonisation.csv`, `m1_lowcloud_test.csv`, `m1_pu_projection_calibrated.csv`, `m1_pu_projection_monthly.csv`, `m1_pu_plan_options.csv`.
+**Chosen design.** After the pilot, the project owner chose the 10-band seasonal composites (b10), the monthly series at 20 m and the low-cloud filter, all 16-bit, on 10 km windows: 19 203 PU projected (10 528 seasonal + 8 675 monthly) for 585 requests, within the 20 000 PU extraction budget, with the reserve covering any overrun.
+
+Sources: `reports/results/m1_pilot_cost.csv`, `m1_pilot_qa.csv`, `m1_harmonisation.csv`, `m1_lowcloud_test.csv`, `m1_pu_projection_calibrated.csv`, `m1_pu_projection_monthly.csv`, `m1_pu_plan_options.csv`, `m1_chosen_plan.csv`.
 
 ## 6. Implications for the rest of the project
 
