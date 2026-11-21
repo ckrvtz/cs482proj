@@ -8,6 +8,7 @@ matching file already exists. API calls need an explicit ``allow_api=True``.
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
 from collections.abc import Callable
 from pathlib import Path
@@ -15,7 +16,7 @@ from typing import Any
 
 import numpy as np
 
-from desertification.cache import cached_file_valid, write_sidecar
+from desertification.cache import cached_file_valid, sidecar_path, write_sidecar
 
 logger = logging.getLogger(__name__)
 
@@ -257,7 +258,8 @@ def download_composite(
     called_api : bool
         True if a Process API request was made.
     reported_pu : float or None
-        PU reported by the service in a response header, if any (else None).
+        PU reported by the service in a response header (else None). On a cache hit,
+        the value recorded in the sidecar when the file was downloaded.
     """
     from desertification.config import get_path
 
@@ -289,7 +291,9 @@ def download_composite(
     name = f"{start}_{end}_{int(resolution)}m{suffix}.tif"
     path = get_path(cfg, "data_raw") / aoi_id / name
     if cached_file_valid(path, params):
-        return path, False, None
+        # Report the cost recorded when the file was downloaded, so re-runs keep it.
+        meta = json.loads(sidecar_path(path).read_text(encoding="utf-8"))
+        return path, False, meta.get("reported_processing_units")
     if not allow_api:
         return None, False, None
 

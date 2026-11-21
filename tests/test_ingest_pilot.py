@@ -102,10 +102,11 @@ def test_download_composite_cache_permission_and_metadata(cfg):
         *args, bands=bands, label="t", allow_api=True, request_fn=fake
     )
     assert called and pu == 1.7 and path.name == "2023-06-01_2023-09-30_20m_t.tif"
-    again, called2, _ = download_composite(
+    again, called2, cached_pu = download_composite(
         *args, bands=bands, label="t", allow_api=True, request_fn=fake
     )
     assert again == path and called2 is False and len(calls) == 1
+    assert cached_pu == 1.7  # cache hit returns the PU recorded at download time
 
     meta = json.loads(sidecar_path(path).read_text())
     assert meta["request"]["sample_type"] == "UINT16" and meta["request"]["bands"] == bands
