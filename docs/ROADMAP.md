@@ -154,7 +154,7 @@ Default **invalid** set for masking: `{0, 1, 2, 3, 8, 9, 10, 11}`. Water (6) is 
 5. **Multi-temporal requests cost more PUs** (cost grows with the number of acquisitions). Run a pilot (`M1-T05`) to measure PU cost per AOI-season before scaling up.
 6. **Revisit and coverage:** S2A (2015), S2B (2017) and S2C (launched 2024) give ~5-day revisit at the equator, but early years and some regions are sparser. Use the Catalog API to check per-AOI availability; the default study period is **2019-01-01 to 2025-12-31**.
 
-**Reference evalscript — cloud-masked per-band median composite** (starting point for `src/desertification/evalscripts/median_composite.js`; test it before relying on it):
+**Reference evalscript — cloud-masked per-band median composite.** *Superseded:* the project uses `src/desertification/evalscripts/median_composite.js`, which outputs **UINT16** (reflectance × 10 000, harmonised DN) instead of FLOAT32 to halve the PU cost (Decision log #45). The original sketch is kept below for reference:
 
 ```js
 //VERSION=3
@@ -371,6 +371,7 @@ cs482proj/
 │   ├── aoi.py                    # AOI squares, seasons, aridity, availability (pure)
 │   ├── schema.py                 # §7 column definitions (names, dtypes, units)
 │   ├── feasibility.py            # record counts, complete seasons, PU projections (pure)
+│   ├── qa.py                     # data checks: holes, reflectance range, harmonisation (pure)
 │   ├── preprocess.py             # masking, gridding/aggregation, QA
 │   ├── features.py               # indices + temporal features
 │   ├── trends.py                 # Theil–Sen, Mann–Kendall, RESTREND
@@ -722,7 +723,7 @@ Fill in owners and due dates. Tick tasks as they finish (`[x]`, date, note). `[~
 | [x] | M1-T02 | Select & validate AOIs | | 2026-11-21 | 6 AOIs final in `config/aois.geojson` (Urmia and Kubuqi moved by the owner). AI 0.143–0.322 for the 5 drylands + hyper-arid erg control (0.043); ≥ 47 usable S-2 dates every year for every AOI; seasons from the 1991–2020 rainfall climatology; map, climatology, availability and true-colour figures in `reports/figures/m1_aoi_*.png`. Total cost 150 requests, 24 PU |
 | [x] | M1-T03 | Feasibility & scale | | 2026-11-21 | 6 AOIs × 40 000 cells → 3 240 000 `cell_season` records (smallest AOI 520 000), 34 attributes (24 without band std); schema test against §7.2. PU cost pending the pilot; rule-based projection shows the reference composite design ≈ 4.6 × the extraction budget (open question 12) |
 | [ ] | M1-T04 | Instructor discussion | | | Deferred, non-blocking |
-| [ ] | M1-T05 | Pilot extraction | | | |
+| [~] | M1-T05 | Pilot extraction | | 2026-11-21 | UINT16 median-composite evalscript, cached `download_composite`, Statistical API harmonisation check, QA helpers, `notebooks/02_ingestion.ipynb`; 121 tests pass. **Pending: approval + local run (3 requests, ~69 PU: Aral 5 km window, dry season 2023, designs b10 and c6; erg statistics)** |
 | [ ] | M1-T06 | Scaled extraction | | | |
 | [ ] | M1-T07 | Auxiliary data | | | |
 | [ ] | M1-T08 | Parse to tables & initial exploration | | | |
@@ -770,7 +771,7 @@ Resolve these and record the answer in [`DECISIONS.md`](DECISIONS.md).
 9. *(Resolved 2026-11-20: personal-motivation paragraph added by the project owner.)*
 10. *(Resolved 2026-11-21: M1-T02 Catalog and true-colour checks run locally; 108 requests, 18 PU; Decision log #39, #40.)*
 11. *(Resolved 2026-11-21: final six AOIs confirmed by the project owner after re-checking the moved Urmia and Kubuqi squares; Decision log #41–#43.)*
-12. **Extraction design vs. PU budget:** the reference seasonal-composite design (20 m, 10 bands + SCL, FLOAT32, all acquisitions) projects to ~93 000 PU, about 4.6 × the 20 000 PU extraction cap; 20 m monthly index series project to ~77 000 PU (`reports/results/m1_pu_projection.csv`). Options: UINT16 output, only the six bands the nine indices need (drops B05–B07, B8A: a §7.2 schema change), fewer acquisitions per composite (e.g. least-cloudy subset), coarser requests for the monthly series, or fewer AOIs/years. *Decide after the M1-T05 pilot measures real costs. Owner: project owner.*
+12. **Extraction design vs. PU budget:** the reference seasonal-composite design (20 m, 10 bands + SCL, FLOAT32, all acquisitions) projects to ~93 000 PU, about 4.6 × the 20 000 PU extraction cap; 20 m monthly index series project to ~77 000 PU (`reports/results/m1_pu_projection.csv`). Options: UINT16 output, only the six bands the nine indices need (drops B05–B07, B8A: a §7.2 schema change), fewer acquisitions per composite (e.g. least-cloudy subset), coarser requests for the monthly series, or fewer AOIs/years. *Decide after the M1-T05 pilot measures real costs. Owner: project owner.* 16-bit output adopted (Decision log #45); the pilot measures b10 vs c6.
 
 ---
 

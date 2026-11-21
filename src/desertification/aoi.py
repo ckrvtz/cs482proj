@@ -334,3 +334,14 @@ def map_bounds(
     lat_min = math.floor((min(lats) - pad_deg) / snap_deg) * snap_deg
     lat_max = math.ceil((max(lats) + pad_deg) / snap_deg) * snap_deg
     return [max(lon_min, -180.0), max(lat_min, -59.0), min(lon_max, 180.0), min(lat_max, 59.0)]
+
+
+def sub_window(bbox_utm: Sequence[float], size_m: float, snap_m: float) -> list[float]:
+    """Centred square sub-window of an AOI bbox, snapped to the ``snap_m`` grid.
+
+    Used for small pilot requests (cost scales with area). Raises if it does not fit.
+    """
+    xmin, ymin, xmax, ymax = bbox_utm
+    if size_m > min(xmax - xmin, ymax - ymin):
+        raise ValueError("sub-window is larger than the AOI")
+    return list(snapped_square((xmin + xmax) / 2, (ymin + ymax) / 2, size_m, snap_m))

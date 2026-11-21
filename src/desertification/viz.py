@@ -377,3 +377,119 @@ def plot_image_grid(
     fig.tight_layout(rect=(0, 0.03, 1, 0.97))
     _save(fig, out_path, dpi=150)
     return fig
+
+
+def plot_pilot_panels(
+    rgb: np.ndarray,
+    ndvi_img: np.ndarray,
+    count: np.ndarray,
+    title: str,
+    attribution: str,
+    out_path: Path | None = None,
+) -> Any:
+    """Three panels for a composite: true colour, NDVI and valid-observation count.
+
+    Parameters
+    ----------
+    rgb : numpy.ndarray
+        (H, W, 3) reflectance 0–1 (already gain-adjusted for display).
+    ndvi_img : numpy.ndarray
+        (H, W) NDVI, NaN where no data.
+    count : numpy.ndarray
+        (H, W) valid observations per pixel.
+    title, attribution : str
+        Figure title and source line.
+    out_path : Path, optional
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+    """
+    import matplotlib.pyplot as plt
+    from matplotlib.colors import LinearSegmentedColormap
+
+    apply_style()
+    ramp = LinearSegmentedColormap.from_list("blue_ramp", BLUE_RAMP)
+    fig, axes = plt.subplots(1, 3, figsize=(12, 4.3))
+    axes[0].imshow(np.clip(rgb, 0, 1))
+    axes[0].set_title("True colour (B04, B03, B02)")
+    im1 = axes[1].imshow(
+        ndvi_img, cmap=ramp, vmin=0, vmax=max(0.3, float(np.nanpercentile(ndvi_img, 99)))
+    )
+    axes[1].set_title("NDVI")
+    c1 = fig.colorbar(im1, ax=axes[1], shrink=0.8)
+    c1.set_label("NDVI (unitless)")
+    ramp_holes = LinearSegmentedColormap.from_list("blue_ramp_holes", BLUE_RAMP)
+    ramp_holes.set_under(INK_2)  # pixels with no valid observation (cloud-mask holes)
+    im2 = axes[2].imshow(count, cmap=ramp_holes, vmin=0.5, vmax=max(1.0, float(np.max(count))))
+    axes[2].set_title("Valid observations per pixel\n(grey = none: cloud-mask hole)")
+    c2 = fig.colorbar(im2, ax=axes[2], shrink=0.8)
+    c2.set_label("Count of valid acquisitions")
+    for ax in axes:
+        ax.grid(False)
+        ax.set_xticks([])
+        ax.set_yticks([])
+    fig.suptitle(title, color=INK)
+    fig.text(0.01, 0.01, attribution, fontsize=7, color=INK_2)
+    fig.tight_layout(rect=(0, 0.04, 1, 0.95))
+    _save(fig, out_path, dpi=150)
+    return fig
+
+
+def plot_reflectance_series(
+    series: Any, cutoff: str, title: str, attribution: str, out_path: Path | None = None
+) -> Any:
+    """Monthly mean reflectance per band with a vertical line at ``cutoff``.
+
+    Parameters
+    ----------
+    series : pandas.DataFrame
+        Columns ``date``, ``band``, ``mean`` (reflectance 0–1).
+    cutoff : str
+        ISO date marked on the plot (e.g. the 2022-01-25 processing-baseline change).
+    title, attribution : str
+    out_path : Path, optional
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+    """
+    import matplotlib.pyplot as plt
+    import pandas as pd
+
+    apply_style()
+    palette = [SERIES_1, SERIES_2, "#1baf7a", "#eda100"]  # validated categorical slots 1-4
+    fig, ax = plt.subplots(figsize=(9, 4))
+    for color, (band, g) in zip(palette, series.groupby("band", sort=False), strict=False):
+        g = g.sort_values("date")
+        ax.plot(
+            pd.to_datetime(g["date"]), g["mean"], marker="o", markersize=4, color=color, label=band
+        )
+        last = g.dropna(subset=["mean"]).iloc[-1]
+        ax.annotate(
+            band,
+            (pd.to_datetime(last["date"]), last["mean"]),
+            xytext=(6, 0),
+            textcoords="offset points",
+            va="center",
+            fontsize=8,
+            color=INK,
+        )
+    ax.axvline(pd.Timestamp(cutoff), color=INK, linewidth=1, linestyle="--")
+    ax.text(
+        pd.Timestamp(cutoff),
+        1.0,
+        f" processing baseline 04.00 ({cutoff})",
+        transform=ax.get_xaxis_transform(),
+        va="bottom",
+        fontsize=7,
+        color=INK,
+    )
+    ax.set_ylabel("Surface reflectance (0–1)")
+    ax.set_xlabel("Month")
+    ax.set_title(title, pad=30)
+    ax.legend(loc="lower left", bbox_to_anchor=(0, 1.0), ncol=len(palette))
+    fig.text(0.01, -0.02, attribution, fontsize=7, color=INK_2)
+    fig.tight_layout()
+    _save(fig, out_path, dpi=150)
+    return fig

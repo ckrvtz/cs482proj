@@ -50,6 +50,27 @@ aoi_selection:
   true_color_resolution_m: 60  # visual check only; ~0.4 PU per image for a 20 km AOI
   map_years: [2019, 2025]      # years averaged for the rainfall backdrop of the AOI map
 
+# Pilot extraction (M1-T05). A small centred window keeps the cost low; cost scales with area.
+pilot:
+  aoi_id: aral                 # brightest surface (salt crust): tests SCL holes and has the most acquisitions (upper-bound cost)
+  season: dry                  # Jun-Sep at Aral (clear skies)
+  year: 2023
+  window_m: 5000               # 5 km x 5 km = 250 x 250 px at 20 m
+  resolution_m: 20
+  designs:                     # all UINT16 (Decision log #45)
+    b10: [B02, B03, B04, B05, B06, B07, B08, B8A, B11, B12]
+    c6: [B02, B03, B04, B08, B11, B12]   # the six bands the nine indices need
+  harmonisation:
+    aoi_id: erg                # stable bright sand
+    window_m: 1000
+    resolution_m: 20
+    start: "2021-01-01"
+    end: "2022-12-31"
+    interval: P1M
+    cutoff: "2022-01-25"       # processing baseline 04.00 (BOA_ADD_OFFSET -1000)
+    bands: [B02, B04, B08, B11]
+    tolerance: 0.02            # max |median same-month step| in reflectance; an unharmonised offset is ~0.1
+
 # Open climate data on the Climate Hazards Center server (no account, no quota).
 climate_data:
   chirps_monthly_url: https://data.chc.ucsb.edu/products/CHIRPS/v3.0/monthly/global/cogs/chirps-v3.0.{year}.{month:02d}.cog
