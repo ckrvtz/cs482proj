@@ -55,6 +55,9 @@ climate_data:
   chirps_monthly_url: https://data.chc.ucsb.edu/products/CHIRPS/v3.0/monthly/global/cogs/chirps-v3.0.{year}.{month:02d}.cog
   eto_monthly_url: https://data.chc.ucsb.edu/products/Hobbins_RefET/ETos_p05_monthly_global/tifs/ETos_p05.{year}.{month:02d}.tiff
   nodata_below: 0              # both products use -9999 over the ocean
+  max_workers: 2               # parallel file reads; the CHC server answers HTTP 429 when pushed harder
+  retry_rounds: 3              # extra passes over files that failed
+  retry_backoff_s: 20          # pause before retry round r is retry_backoff_s * 2**r seconds
 
 # CDSE quota and budget caps in processing units (ROADMAP §3.4).
 quota:

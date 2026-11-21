@@ -12,16 +12,18 @@ URLs come from ``config/project.yaml`` (``climate_data``).
 
 from __future__ import annotations
 
+import json
 import logging
 import math
-from collections.abc import Iterable
+import time
+from collections.abc import Callable, Iterable
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 import numpy as np
 import pandas as pd
 
-from desertification.cache import load_cached_json, save_json_with_sidecar
+from desertification.cache import load_cached_json, save_json_with_sidecar, sidecar_path
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +34,61 @@ GDAL_REMOTE_ENV = {
     "GDAL_HTTP_MAX_RETRY": "3",
     "GDAL_HTTP_RETRY_DELAY": "2",
 }
+
+
+class ClimateDownloadError(RuntimeError):
+    """Some remote climate files could not be read; nothing was cached as complete."""
+
+
+def fetch_with_retries(
+    items: list[Any],
+    fetch: Callable[[Any], Any],
+    max_workers: int,
+    retry_rounds: int,
+    backoff_s: float,
+    sleep: Callable[[float], None] = time.sleep,
+) -> tuple[dict[Any, Any], list[Any]]:
+    """Run ``fetch`` over ``items`` in parallel, then retry failures with backoff.
+
+    ``fetch`` returns None on failure. Retries run one item at a time; before retry round
+    ``r`` (0-based) it waits ``backoff_s * 2**r`` seconds, which gives a rate-limiting
+    server (HTTP 429) time to recover.
+
+    Parameters
+    ----------
+    items : list
+        Hashable work items (e.g. ``(year, month)``).
+    fetch : callable
+        ``fetch(item) -> result or None``.
+    max_workers : int
+        Threads for the first pass.
+    retry_rounds : int
+        Extra passes over failed items.
+    backoff_s : float
+        Base pause in seconds.
+    sleep : callable, default time.sleep
+        Injectable for tests.
+
+    Returns
+    -------
+    (dict, list)
+        ``item -> result`` for successes, and the items that still failed.
+    """
+    with ThreadPoolExecutor(max_workers=max(1, max_workers)) as pool:
+        results = dict(zip(items, pool.map(fetch, items), strict=True))
+    for round_no in range(retry_rounds):
+        failed = [item for item, res in results.items() if res is None]
+        if not failed:
+            break
+        wait = backoff_s * 2**round_no
+        logger.warning(
+            "%d file(s) failed; retry round %d in %.0f s", len(failed), round_no + 1, wait
+        )
+        sleep(wait)
+        for item in failed:
+            results[item] = fetch(item)
+    done = {k: v for k, v in results.items() if v is not None}
+    return done, [k for k, v in results.items() if v is None]
 
 
 def window_for_bounds(
@@ -143,7 +200,7 @@ def monthly_series(
     first_year: int,
     last_year: int,
     allow_download: bool = False,
-    max_workers: int = 8,
+    max_workers: int | None = None,
 ) -> pd.DataFrame | None:
     """Monthly AOI-mean values of a climate source, from cache or the CHC server.
 
@@ -159,13 +216,24 @@ def monthly_series(
         Inclusive year range.
     allow_download : bool, default False
         If False, return None on a cache miss instead of reading remote files.
-    max_workers : int, default 8
-        Parallel file reads.
+    max_workers : int, optional
+        Parallel file reads; defaults to ``climate_data.max_workers``.
 
     Returns
     -------
     pandas.DataFrame or None
         Long table: ``aoi_id``, ``year``, ``month``, ``value`` (mm/month).
+
+    Raises
+    ------
+    ClimateDownloadError
+        If some files still fail after the retry rounds. Months already read are kept in
+        ``<cache>.partial.json`` and only the missing ones are fetched on the next call.
+
+    Notes
+    -----
+    A cache whose sidecar records missing values (written by an older version of this
+    function) is ignored and rebuilt.
     """
     from desertification.config import get_path
 
@@ -186,13 +254,23 @@ def monthly_series(
     path = get_path(cfg, "aux_cache") / source / f"monthly_{first_year}_{last_year}.json"
     cached = load_cached_json(path, params)
     if cached is not None:
-        return pd.DataFrame(cached)
+        meta = json.loads(sidecar_path(path).read_text(encoding="utf-8"))
+        if meta.get("n_missing_values", 0) == 0:
+            return pd.DataFrame(cached)
+        logger.warning("Cached %s series has missing values; rebuilding it", source)
     if not allow_download:
-        logger.info("No cached %s series for these AOIs; downloads not allowed", source)
+        logger.info("No complete cached %s series for these AOIs; downloads not allowed", source)
         return None
 
+    climate = cfg["climate_data"]
     months = month_list(first_year, last_year)
     template = templates[source]
+
+    # Resume from earlier partial runs (same parameters only).
+    partial_path = path.with_name(path.stem + ".partial.json")
+    partial = load_cached_json(partial_path, params) or {}
+    done = {tuple(map(int, key.split("-"))): means for key, means in partial.items()}
+    todo = [ym for ym in months if ym not in done]
 
     def fetch(ym: tuple[int, int]) -> dict[str, float] | None:
         url = template.format(year=ym[0], month=ym[1])
@@ -202,25 +280,40 @@ def monthly_series(
             logger.warning("Could not read %s: %s", url, exc)
             return None
 
-    with ThreadPoolExecutor(max_workers=max_workers) as pool:
-        results = dict(zip(months, pool.map(fetch, months), strict=True))
-    # Retry failed files once, one at a time, so a transient network error is not cached.
-    for ym in [ym for ym, means in results.items() if means is None]:
-        results[ym] = fetch(ym)
+    fetched, failed = fetch_with_retries(
+        todo,
+        fetch,
+        max_workers=max_workers or climate.get("max_workers", 2),
+        retry_rounds=climate.get("retry_rounds", 3),
+        backoff_s=climate.get("retry_backoff_s", 20),
+    )
+    done.update(fetched)
+    if failed:
+        save_json_with_sidecar(
+            partial_path, {f"{y}-{m:02d}": v for (y, m), v in sorted(done.items())}, params
+        )
+        examples = ", ".join(f"{y}-{m:02d}" for y, m in failed[:5])
+        raise ClimateDownloadError(
+            f"{len(failed)} of {len(months)} {source} files could not be read (e.g. {examples}); "
+            f"the server may be rate-limiting (HTTP 429). {len(done)} months are saved; run "
+            "again later and only the missing months will be fetched."
+        )
 
     rows = []
-    for (year, month), means in results.items():
-        means = means if means is not None else dict.fromkeys(params["bboxes"], float("nan"))
+    for (year, month), means in sorted(done.items()):
         rows += [{"aoi_id": k, "year": year, "month": month, "value": v} for k, v in means.items()]
     df = pd.DataFrame(rows).sort_values(["aoi_id", "year", "month"]).reset_index(drop=True)
-    n_missing = int(df["value"].isna().sum())
+    n_missing = int(df["value"].isna().sum())  # NaN here = no valid pixel (e.g. ocean)
     save_json_with_sidecar(
         path,
         df.to_dict(orient="records"),
         params,
         extra={"n_files": len(months), "n_missing_values": n_missing},
     )
-    logger.info("Cached %d %s values (%d missing) at %s", len(df), source, n_missing, path)
+    # The partial file was only a resume aid for this cache; the full cache supersedes it.
+    for leftover in (partial_path, sidecar_path(partial_path)):
+        leftover.unlink(missing_ok=True)
+    logger.info("Cached %d %s values at %s", len(df), source, path)
     return df
 
 
@@ -277,22 +370,37 @@ def rainfall_overview(
     if not allow_download:
         return None
 
-    def read(ym: tuple[int, int]) -> tuple[np.ndarray, list[float]]:
+    def read(ym: tuple[int, int]) -> tuple[np.ndarray, list[float]] | None:
         url = template.format(year=ym[0], month=ym[1])
-        with rasterio.Env(**GDAL_REMOTE_ENV), rasterio.open(f"/vsicurl/{url}") as ds:
-            r0, r1, c0, c1 = window_for_bounds(ds.transform, bounds, ds.width, ds.height)
-            shape = (max(1, (r1 - r0) // decimation), max(1, (c1 - c0) // decimation))
-            data = ds.read(1, window=Window(c0, r0, c1 - c0, r1 - r0), out_shape=shape)
-            left, top = ds.transform @ (c0, r0)
-            right, bottom = ds.transform @ (c1, r1)
-        data = clean_overview(data)
-        return data, [left, right, bottom, top]
+        try:
+            with rasterio.Env(**GDAL_REMOTE_ENV), rasterio.open(f"/vsicurl/{url}") as ds:
+                r0, r1, c0, c1 = window_for_bounds(ds.transform, bounds, ds.width, ds.height)
+                shape = (max(1, (r1 - r0) // decimation), max(1, (c1 - c0) // decimation))
+                data = ds.read(1, window=Window(c0, r0, c1 - c0, r1 - r0), out_shape=shape)
+                left, top = ds.transform @ (c0, r0)
+                right, bottom = ds.transform @ (c1, r1)
+        except Exception as exc:  # noqa: BLE001 - retried below
+            logger.warning("Could not read %s: %s", url, exc)
+            return None
+        return clean_overview(data), [left, right, bottom, top]
 
-    with ThreadPoolExecutor(max_workers=8) as pool:
-        results = list(pool.map(read, month_list(first_year, last_year)))
+    climate = cfg["climate_data"]
+    months = month_list(first_year, last_year)
+    results, failed = fetch_with_retries(
+        months,
+        read,
+        max_workers=climate.get("max_workers", 2),
+        retry_rounds=climate.get("retry_rounds", 3),
+        backoff_s=climate.get("retry_backoff_s", 20),
+    )
+    if failed:
+        raise ClimateDownloadError(
+            f"{len(failed)} of {len(months)} CHIRPS overview files could not be read; the "
+            "server may be rate-limiting (HTTP 429). Run again later."
+        )
     n_years = last_year - first_year + 1
-    rain = np.sum([r[0] for r in results], axis=0) / n_years
-    extent = results[0][1]
+    rain = np.sum([results[ym][0] for ym in months], axis=0) / n_years
+    extent = results[months[0]][1]
     path.parent.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(path, rain=rain, extent=np.array(extent))
     write_sidecar(path, params)

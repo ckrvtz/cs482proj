@@ -42,6 +42,7 @@ def cfg(tmp_path):
         aux_cache=str(tmp_path / "aux"),
         true_color_cache=str(tmp_path / "tc"),
     )
+    cfg["climate_data"] = dict(cfg["climate_data"], retry_backoff_s=0)  # no real waiting
     return cfg
 
 
@@ -314,18 +315,79 @@ def test_monthly_series_retries_a_failed_file_once(cfg, monkeypatch):
     assert len(calls) == 13  # 12 months + 1 retry
 
 
-def test_monthly_series_keeps_nan_when_retry_also_fails(cfg, monkeypatch):
+def test_monthly_series_failure_is_not_cached_and_resumes(cfg, monkeypatch):
+    from desertification.aux_data import ClimateDownloadError
+
+    calls = []
+
     def broken_read(url, bboxes, nodata_below):
+        calls.append(url)
         if url.endswith("2020.03.cog"):
-            raise OSError("file missing")
+            raise OSError("HTTP 429")
         return dict.fromkeys(bboxes, 1.0)
 
     monkeypatch.setattr(aux_data, "read_window_means", broken_read)
-    df = monthly_series(
-        cfg, "chirps", {"a": [0.0, 0.0, 0.2, 0.2]}, 2020, 2020, allow_download=True, max_workers=2
+    box = {"a": [0.0, 0.0, 0.2, 0.2]}
+    with pytest.raises(ClimateDownloadError, match="1 of 12"):
+        monthly_series(cfg, "chirps", box, 2020, 2020, allow_download=True, max_workers=2)
+    assert len(calls) == 12 + 3  # first pass + 3 retry rounds for March
+    assert monthly_series(cfg, "chirps", box, 2020, 2020, allow_download=False) is None
+
+    # Next run: only the missing month is fetched, then the full cache is written.
+    calls.clear()
+    monkeypatch.setattr(
+        aux_data,
+        "read_window_means",
+        lambda url, b, n: (calls.append(url), dict.fromkeys(b, 2.0))[1],
     )
-    assert df["value"].isna().sum() == 1
-    assert df.loc[df["value"].isna(), "month"].item() == 3
+    df = monthly_series(cfg, "chirps", box, 2020, 2020, allow_download=True)
+    assert calls == [cfg["climate_data"]["chirps_monthly_url"].format(year=2020, month=3)]
+    assert len(df) == 12 and not df["value"].isna().any()
+    assert df.loc[df["month"] == 3, "value"].item() == 2.0
+    assert monthly_series(cfg, "chirps", box, 2020, 2020, allow_download=False) is not None
+
+
+def test_cache_with_missing_values_is_rebuilt(cfg, monkeypatch):
+    import json as _json
+
+    from desertification.cache import sidecar_path
+
+    monkeypatch.setattr(aux_data, "read_window_means", lambda url, b, n: dict.fromkeys(b, 4.0))
+    box = {"a": [0.0, 0.0, 0.2, 0.2]}
+    df = monthly_series(cfg, "chirps", box, 2020, 2020, allow_download=True)
+    path = next((pathlib_path for pathlib_path in _cache_files(cfg)), None)
+    meta = _json.loads(sidecar_path(path).read_text())
+    meta["n_missing_values"] = 3  # simulate a gap-filled cache from the old code
+    sidecar_path(path).write_text(_json.dumps(meta))
+    assert monthly_series(cfg, "chirps", box, 2020, 2020, allow_download=False) is None
+    assert len(df) == 12
+
+
+def _cache_files(cfg):
+    from desertification.config import get_path
+
+    return sorted((get_path(cfg, "aux_cache") / "chirps").glob("monthly_*_*.json"))
+
+
+def test_fetch_with_retries_backoff():
+    from desertification.aux_data import fetch_with_retries
+
+    attempts, waits = {}, []
+
+    def flaky(item):
+        attempts[item] = attempts.get(item, 0) + 1
+        return None if item == "b" and attempts[item] < 3 else item.upper()
+
+    done, failed = fetch_with_retries(
+        ["a", "b"], flaky, 2, retry_rounds=3, backoff_s=5, sleep=waits.append
+    )
+    assert done == {"a": "A", "b": "B"} and failed == []
+    assert waits == [5, 10]  # two retry rounds needed: 5 s then 10 s
+
+    done, failed = fetch_with_retries(
+        ["x"], lambda i: None, 1, retry_rounds=2, backoff_s=1, sleep=waits.append
+    )
+    assert done == {} and failed == ["x"]
 
 
 def test_clean_overview():
