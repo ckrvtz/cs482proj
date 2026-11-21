@@ -83,6 +83,10 @@ extraction:
   sample_type: UINT16          # reflectance x 10000 + valid count (Decision log #45)
   seasonal_bands: [B02, B03, B04, B05, B06, B07, B08, B8A, B11, B12]   # "b10": all of sentinel2.bands
   monthly_bands: [B02, B04, B08, B11, B12]   # NDVI, MSAVI2, BSI, albedo (+ SCL)
+  window_offsets_m: {}         # optional per-AOI shift of the window centre, e.g. {urmia: [2000, 0]} (east, north)
+  max_requests_per_run: 60     # default chunk size for one extraction run (resumable)
+  attempts: 3                  # tries per request
+  retry_backoff_s: 15          # wait before retry k is retry_backoff_s * 2**k seconds
 
 # Open climate data on the Climate Hazards Center server (no account, no quota).
 climate_data:

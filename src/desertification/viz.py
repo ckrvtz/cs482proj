@@ -493,3 +493,85 @@ def plot_reflectance_series(
     fig.tight_layout()
     _save(fig, out_path, dpi=150)
     return fig
+
+
+def plot_window_preview(
+    images: dict[str, np.ndarray | None],
+    aoi_bboxes: dict[str, Sequence[float]],
+    windows: dict[str, Sequence[float]],
+    titles: dict[str, str],
+    caption: str,
+    out_path: Path | None = None,
+) -> Any:
+    """True-colour AOI images with the extraction window outlined.
+
+    Parameters
+    ----------
+    images : dict
+        ``aoi_id -> (H, W, 3 or 4) uint8`` image covering the AOI bbox, or None.
+    aoi_bboxes, windows : dict
+        ``aoi_id -> [xmin, ymin, xmax, ymax]`` in the AOI's UTM metres.
+    titles : dict
+        ``aoi_id -> panel title``.
+    caption : str
+        Source line.
+    out_path : Path, optional
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+    """
+    import textwrap
+
+    import matplotlib.pyplot as plt
+    from matplotlib.patches import Rectangle
+
+    apply_style()
+    ids = list(aoi_bboxes)
+    ncols = 3
+    nrows = int(np.ceil(len(ids) / ncols))
+    fig, axes = plt.subplots(nrows, ncols, figsize=(3.6 * ncols, 3.8 * nrows), squeeze=False)
+    for ax, aoi_id in zip(axes.flat, ids, strict=False):
+        xmin, ymin, xmax, ymax = aoi_bboxes[aoi_id]
+        img = images.get(aoi_id)
+        if img is not None:
+            ax.imshow(img[..., :3], extent=(xmin, xmax, ymin, ymax))
+        else:
+            ax.text(
+                0.5,
+                0.5,
+                "no cached image",
+                ha="center",
+                va="center",
+                transform=ax.transAxes,
+                color=INK_2,
+            )
+        wx0, wy0, wx1, wy1 = windows[aoi_id]
+        ax.add_patch(
+            Rectangle((wx0, wy0), wx1 - wx0, wy1 - wy0, fill=False, edgecolor=SURFACE, linewidth=3)
+        )
+        ax.add_patch(
+            Rectangle(
+                (wx0, wy0),
+                wx1 - wx0,
+                wy1 - wy0,
+                fill=False,
+                edgecolor=SERIES_2,
+                linewidth=1.6,
+                linestyle="--",
+            )
+        )
+        ax.set_xlim(xmin, xmax)
+        ax.set_ylim(ymin, ymax)
+        ax.set_aspect("equal")
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.grid(False)
+        ax.set_title(textwrap.fill(titles.get(aoi_id, aoi_id), 30), fontsize=9)
+    for ax in list(axes.flat)[len(ids) :]:
+        ax.set_visible(False)
+    fig.suptitle("Extraction windows (dashed) inside the validated 20 km AOI squares", color=INK)
+    fig.text(0.01, 0.005, caption, fontsize=7, color=INK_2)
+    fig.tight_layout(rect=(0, 0.03, 1, 0.96))
+    _save(fig, out_path, dpi=150)
+    return fig
