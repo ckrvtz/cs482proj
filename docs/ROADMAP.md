@@ -726,7 +726,7 @@ Fill in owners and due dates. Tick tasks as they finish (`[x]`, date, note). `[~
 | [x] | M1-T03 | Feasibility & scale | | 2026-11-21 | 6 AOIs × 40 000 cells → 3 240 000 `cell_season` records (smallest AOI 520 000), 34 attributes (24 without band std); schema test against §7.2. PU cost pending the pilot; rule-based projection shows the reference composite design ≈ 4.6 × the extraction budget (open question 12) |
 | [ ] | M1-T04 | Instructor discussion | | | Deferred, non-blocking |
 | [x] | M1-T05 | Pilot extraction | | 2026-11-21 | Local run: b10 42.8 PU, c6 27.3 PU (projection accurate to ×1.02); no holes (valid count 19–35); reflectance within 0–1; harmonisation step ≤ 0.005. Dashboard (settled): 71 PU, 3 requests. Re-run made 0 API requests (cache confirmed by the owner). |
-| [~] | M1-T06 | Scaled extraction | | 2026-11-21 | Plan (585 requests, ≈ 19 203 PU projected, fits the cap with 797 PU to spare), resumable runner with retries/backoff, request limit and PU budget guard, download log, status check and window preview built; 134 tests pass. **Pending: owner checks the window preview, approves, and runs the extraction locally (in chunks)** |
+| [~] | M1-T06 | Scaled extraction | | 2026-11-21 | Plan 585 requests (≈ 19 203 PU projected); windows reviewed (Decision log #54–#55). Chunk 1: 60/60 Aral downloaded, 1 820.6 PU reported (×0.76 of projection), ~152 MB. **In progress: 525 requests remaining (est. ≈ 1.25 GB more on disk)** |
 | [ ] | M1-T07 | Auxiliary data | | | |
 | [ ] | M1-T08 | Parse to tables & initial exploration | | | |
 | [ ] | M1-T09 | Cleaning & preliminary stats | | | |
