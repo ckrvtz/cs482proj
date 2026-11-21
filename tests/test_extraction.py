@@ -193,3 +193,15 @@ def test_append_log_and_plan_status(tmp_path, plan):
     status = plan_status(plan, present={"x_wet_2019"}, failed={"x_dry_2019": "HTTP 503"})
     assert status.set_index("request_id").loc["x_dry_2019", "reason"] == "HTTP 503"
     assert (status["status"] == "missing").sum() == len(plan) - 2
+
+
+def test_offset_windows_get_their_own_file_names():
+    centred = build_plan([AOI], ext(), PERIOD, 100, {"x": 120.0}, {"x": 0.5})
+    shifted = build_plan(
+        [AOI], ext(), PERIOD, 100, {"x": 120.0}, {"x": 0.5}, offsets={"x": [2000, -1000]}
+    )
+    assert shifted.iloc[0]["label"] == "s10b_lc40_w10km_off2000e-1000n"
+    assert shifted.iloc[0]["window_utm"] != centred.iloc[0]["window_utm"]
+    names_c = {expected_filename(r, 20) for r in centred.to_dict(orient="records")}
+    names_s = {expected_filename(r, 20) for r in shifted.to_dict(orient="records")}
+    assert names_c.isdisjoint(names_s)

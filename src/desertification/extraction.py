@@ -162,8 +162,14 @@ def build_plan(
     rows = []
     for p in aois:
         aoi_id = p["aoi_id"]
-        window = extraction_window(
-            p["bbox_utm"], extraction["window_m"], snap_m, (offsets or {}).get(aoi_id, (0.0, 0.0))
+        offset = tuple((offsets or {}).get(aoi_id, (0.0, 0.0)))
+        window = extraction_window(p["bbox_utm"], extraction["window_m"], snap_m, offset)
+        # A shifted window gets its own file names, so changing an offset never overwrites
+        # files downloaded for another window.
+        off_tag = (
+            ""
+            if offset == (0.0, 0.0) or offset == (0, 0)
+            else f"_off{int(offset[0])}e{int(offset[1])}n"
         )
         w, h = grid_shape(window, res)
         factor = low_cloud_factor(usable_share[aoi_id], lc_adjust) if maxcc is not None else 1.0
@@ -186,7 +192,7 @@ def build_plan(
                         "start": start,
                         "end": end,
                         "bands": bands,
-                        "label": f"s{len(bands)}b{lc_tag}_w{km}km",
+                        "label": f"s{len(bands)}b{lc_tag}_w{km}km{off_tag}",
                         "window_utm": window,
                         "epsg": p["utm_epsg"],
                         "projected_pu": pu * calib * factor,
@@ -206,7 +212,7 @@ def build_plan(
                     "start": start,
                     "end": end,
                     "bands": bands,
-                    "label": f"m{len(bands)}b{lc_tag}_w{km}km",
+                    "label": f"m{len(bands)}b{lc_tag}_w{km}km{off_tag}",
                     "window_utm": window,
                     "epsg": p["utm_epsg"],
                     "projected_pu": pu * calib * factor,
