@@ -7,3 +7,4 @@ date,task_id,api,budget_category,request_count,pu_before,pu_after,requests_befor
 2026-11-21,M1-T05,process+statistical,setup_pilot,2,29905,29887,29846,29845,Pilot: 1 request(s) (composite c6 low-cloud (max cloud 40%))
 2026-11-21,M1-T06,process,extraction,61,29887,28067,29845,29785,"Extraction run: 60 composites, 1820.6 PU reported"
 2026-11-21,M1-T06,process,extraction,61,28067,26914,29785,29736,"Extraction run: 60 composites, 1370.1 PU reported"
+2026-11-21,M1-T06,process,extraction,466,26671,15199,29699,29234,"Extraction run: 465 composites, 11472.1 PU reported"
