@@ -93,6 +93,18 @@ python scripts/unpack_data.py [--dry-run] [--overwrite]                    # res
 - Never commit raw rasters or large files. `data/processed/` is committed only if its total is ≲ 50 MB; if it grows past that, raise it with the user (a GitHub Release asset is the likely option).
 - Each external dataset (CHIRPS, DEM, WorldCover, aridity, Landsat, …) gets its licence and citation added to `docs/REFERENCES.md` when first used.
 
+## Downloading from any online source (default pattern)
+
+Applies to every remote read: Sentinel Hub, Planetary Computer, CHC (CHIRPS, ETo), AWS buckets, web pages and any future source. Follow the pattern in `desertification.aux_data` (`fetch_with_retries`, `monthly_series`, `rainfall_overview`) and `desertification.cache`; reuse those helpers rather than writing new download loops.
+
+- **Cache first, with provenance.** Check for a valid cache (file + `.meta.json` sidecar whose request hash matches) before any network call. A cache hit makes zero requests.
+- **Resume, never restart.** A download made of many items (months, tiles, pages, scenes) saves what succeeded before giving up, in a `<cache>.partial.*` file with its own sidecar. The next run loads it and fetches **only the missing items**. When everything is in, write the final cache and remove the partial file. A failed run must never force successful items to be downloaded again.
+- **Never cache gaps as complete.** Write the final cache only when every item succeeded. Otherwise raise a clear error that says how many items are saved and that re-running resumes. Treat an existing cache that records missing items as invalid.
+- **Be polite to servers.** Use few parallel requests (config value, default 2), retry failures in later rounds with exponential backoff (`retry_rounds`, `retry_backoff_s` in config), and stop rather than hammer a server that keeps answering HTTP 429/5xx.
+- **Respect access controls.** Use each provider's documented API and access method. Never get around bot challenges, rate limits, logins or terms of use (no spoofed User-Agents, no scraping around blocks). If a source blocks automated access, use another source or ask the user to download it manually.
+- **Explicit opt-in and logging** for anything with a quota (`allow_api` / `ALLOW_API_CALLS`, usage ledger), as above.
+- **Test it:** every new download function gets tests with a fake reader for (1) a cache hit making no calls, (2) a failure that saves partial results and raises, and (3) a re-run that fetches only the missing items.
+
 ## Machine learning integrity rules (non-negotiable)
 
 - **No label leakage.** For the predictive task, features come only from the early period (2019–2021, from config). Assert this in code. Features computed from the same series and window as a label must not be model inputs.
@@ -127,6 +139,8 @@ python scripts/unpack_data.py [--dry-run] [--overwrite]                    # res
 ## Don'ts (quick list)
 
 - Don't hit the API in bulk without asking.
+- Don't write a download loop that can't resume: partial results are saved, only missing items are re-fetched, and gaps are never cached as complete.
+- Don't get around bot challenges, rate limits or access controls.
 - Don't use random (non-spatial) CV, tune on the test set, or leak late-period information into features.
 - Don't hard-code paths, years, AOIs or thresholds.
 - Don't apply the L2A offset manually when using harmonised Sentinel Hub output.
