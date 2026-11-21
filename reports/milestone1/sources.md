@@ -67,7 +67,45 @@ As climate change continues to accelerate and ravage our natural world, I believ
 
 **Decision:** keep **Sentinel Hub on CDSE as the primary source** for Sentinel-2 L2A. Server-side compositing and cloud masking keep downloads small enough to fit the quota, and values are harmonised across the 2022 processing-baseline change. **Planetary Computer is the secondary source**: it supplies the open 30 m DEM and WorldCover, it is a fallback for Sentinel-2 if the quota runs out, and Landsat gives optional long-term context.
 
-**Feasibility of size (at least 10 000 records with 15 attributes):** one 20 km × 20 km area gridded into 100 m cells gives 40 000 cells; with 7 years × 2 seasons that is 560 000 cell-season records, each with 10 band values plus 9 indices plus auxiliary variables (ROADMAP §4.3–§4.4). The exact numbers depend on the final study areas (M1-T02, M1-T03).
+**Feasibility of size (at least 10 000 records with 15 attributes; M1-T03).** Each AOI in `config/aois.geojson` is a 20 km × 20 km UTM square, i.e. 200 × 200 = 40 000 cells of 100 m (5 × 5 pixels at 20 m). The main table, `cell_season`, has one record per cell, year and season; only seasons lying entirely inside 2019–2025 are counted, so AOIs whose wet or dry season crosses the year end contribute 6 rather than 7 of that season.
+
+| AOI | Cells (100 m) | Wet seasons | Dry seasons | `cell_season` records | `cell_monthly` records |
+|---|---|---|---|---|---|
+| Aral Sea | 40 000 | 6 | 7 | 520 000 | 3 360 000 |
+| Ferlo | 40 000 | 7 | 7 | 560 000 | 3 360 000 |
+| Fakara | 40 000 | 7 | 6 | 520 000 | 3 360 000 |
+| Kubuqi | 40 000 | 7 | 6 | 520 000 | 3 360 000 |
+| Lake Urmia | 40 000 | 7 | 7 | 560 000 | 3 360 000 |
+| Grand Erg | 40 000 | 7 | 7 | 560 000 | 3 360 000 |
+| **Total** | **240 000** | 41 | 40 | **3 240 000** | **20 160 000** |
+
+That is **3 240 000 `cell_season` records**; the smallest AOI alone gives 520 000. Each record has **34 attributes** (24 without the optional within-cell standard deviations), defined in `desertification.schema` and checked by a unit test against ROADMAP §7.2:
+
+| Group | Columns |
+|---|---|
+| Keys | cell_id, aoi_id (not counted) |
+| Time | year, season |
+| Band means (10) | B02_mean, B03_mean, B04_mean, B05_mean, B06_mean, B07_mean, B08_mean, B8A_mean, B11_mean, B12_mean |
+| Band within-cell std (10, optional) | B02_std … B12_std |
+| Indices (9) | NDVI, EVI, SAVI, MSAVI2, NDMI, NDWI, BSI, TGSI, albedo |
+| Quality and climate (3) | valid_obs_median, valid_pixel_frac, precip_season_mm |
+
+Both counts exceed the Milestone 1 minimum by orders of magnitude, so we can also subsample (e.g. for the manual validation set or faster model tuning) without running short.
+
+**Processing-unit cost: pending the pilot (M1-T05).** Using the official CDSE PU rules and the acquisition counts from M1-T02, the projected costs of the planned downloads are:
+
+| Product | Design | Requests | Projected PU | × extraction budget |
+|----------|--------------------------|------|--------|--------|
+| seasonal composites (cell_season) | A. 20 m, 10 bands + SCL, FLOAT32 (reference evalscript) | 81 | 92 903 | 4.65 |
+| seasonal composites (cell_season) | B. 20 m, 10 bands + SCL, UINT16 (reflectance x 10000) | 81 | 46 452 | 2.32 |
+| seasonal composites (cell_season) | C. 20 m, 6 index bands + SCL, UINT16 (B02 B03 B04 B08 B11 B12: all 9 indices; drops B05-B07, B8A) | 81 | 29 560 | 1.48 |
+| seasonal composites (cell_season) | D. 100 m (cell size), 10 bands + SCL, UINT16 (no within-cell std) | 81 | 1 858 | 0.09 |
+| monthly indices (cell_monthly) | E. monthly indices, 20 m, FLOAT32 | 504 | 76 904 | 3.85 |
+| monthly indices (cell_monthly) | F. monthly indices, 100 m, FLOAT32 | 504 | 3 076 | 0.15 |
+
+A seasonal composite passes every acquisition in the season to the evalscript, and each one is charged as a data sample, so the reference design (A) would cost about 4.6 times the 20 000 PU extraction budget. Integer output, keeping only the six bands that the nine indices need, or requesting coarser pixels brings it down. Coarser requests use nearest-pixel downsampling by default, not a cell mean, and lose the within-cell standard deviation. The pilot measures the real cost per request before the design is chosen.
+
+Sources: `reports/results/m1_feasibility.csv`, `m1_attributes.csv`, `m1_pu_projection.csv` (`notebooks/01c_feasibility.ipynb`).
 
 ## 6. Implications for the rest of the project
 

@@ -1,0 +1,37 @@
+column,dtype,description,is_key
+cell_id,string,Cell identifier <aoi_id>_<row>_<col>,True
+aoi_id,category,AOI identifier,True
+year,int16,Year (start year for a season that crosses the year end),False
+season,category,wet / dry (AOI-specific months),False
+B02_mean,float32,"B02 reflectance (0-1), mean over cell pixels",False
+B03_mean,float32,"B03 reflectance (0-1), mean over cell pixels",False
+B04_mean,float32,"B04 reflectance (0-1), mean over cell pixels",False
+B05_mean,float32,"B05 reflectance (0-1), mean over cell pixels",False
+B06_mean,float32,"B06 reflectance (0-1), mean over cell pixels",False
+B07_mean,float32,"B07 reflectance (0-1), mean over cell pixels",False
+B08_mean,float32,"B08 reflectance (0-1), mean over cell pixels",False
+B8A_mean,float32,"B8A reflectance (0-1), mean over cell pixels",False
+B11_mean,float32,"B11 reflectance (0-1), mean over cell pixels",False
+B12_mean,float32,"B12 reflectance (0-1), mean over cell pixels",False
+B02_std,float32,"B02 reflectance (0-1), within-cell std",False
+B03_std,float32,"B03 reflectance (0-1), within-cell std",False
+B04_std,float32,"B04 reflectance (0-1), within-cell std",False
+B05_std,float32,"B05 reflectance (0-1), within-cell std",False
+B06_std,float32,"B06 reflectance (0-1), within-cell std",False
+B07_std,float32,"B07 reflectance (0-1), within-cell std",False
+B08_std,float32,"B08 reflectance (0-1), within-cell std",False
+B8A_std,float32,"B8A reflectance (0-1), within-cell std",False
+B11_std,float32,"B11 reflectance (0-1), within-cell std",False
+B12_std,float32,"B12 reflectance (0-1), within-cell std",False
+NDVI,float32,Index from cell-mean reflectances,False
+EVI,float32,Index from cell-mean reflectances,False
+SAVI,float32,Index from cell-mean reflectances,False
+MSAVI2,float32,Index from cell-mean reflectances,False
+NDMI,float32,Index from cell-mean reflectances,False
+NDWI,float32,Index from cell-mean reflectances,False
+BSI,float32,Index from cell-mean reflectances,False
+TGSI,float32,Index from cell-mean reflectances,False
+albedo,float32,Index from cell-mean reflectances,False
+valid_obs_median,float32,Median per-pixel count of valid observations,False
+valid_pixel_frac,float32,Fraction of cell pixels with >= 1 valid observation,False
+precip_season_mm,float32,CHIRPS v3 seasonal rainfall total (mm),False

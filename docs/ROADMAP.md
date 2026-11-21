@@ -369,6 +369,8 @@ cs482proj/
 │   ├── ingest.py                 # Process/Statistical API downloads + caching + provenance
 │   ├── aux_data.py               # CHIRPS, DEM, WorldCover, aridity
 │   ├── aoi.py                    # AOI squares, seasons, aridity, availability (pure)
+│   ├── schema.py                 # §7 column definitions (names, dtypes, units)
+│   ├── feasibility.py            # record counts, complete seasons, PU projections (pure)
 │   ├── preprocess.py             # masking, gridding/aggregation, QA
 │   ├── features.py               # indices + temporal features
 │   ├── trends.py                 # Theil–Sen, Mann–Kendall, RESTREND
@@ -380,6 +382,7 @@ cs482proj/
 ├── notebooks/
 │   ├── 01_data_discovery.ipynb
 │   ├── 01b_aoi_selection.ipynb      # M1-T02
+│   ├── 01c_feasibility.ipynb        # M1-T03
 │   ├── 02_ingestion.ipynb
 │   ├── 03_cleaning_eda.ipynb
 │   ├── 04_feature_engineering.ipynb
@@ -717,7 +720,7 @@ Fill in owners and due dates. Tick tasks as they finish (`[x]`, date, note). `[~
 | [x] | P0-T03 | CDSE credentials & connectivity | | 2026-11-20 | Local run: Catalog search over `ferlo_test`, Jan 2023 returned 6 scenes (tile 28PEC; cloud cover 0–98.7%, median 37.2%; 2 scenes < 10%). Ledger updated; 0 PU and 1 request charged |
 | [x] | M1-T01 | Document candidate sources | | 2026-11-20 | `reports/milestone1/sources.md`: both sources and the auxiliary datasets documented from official docs (links, quotes, access date), with the project owner's personal-motivation paragraph; builds to PDF with no warnings. Aridity-index facts left `[VERIFY]` for M1-T02 |
 | [x] | M1-T02 | Select & validate AOIs | | 2026-11-21 | 6 AOIs final in `config/aois.geojson` (Urmia and Kubuqi moved by the owner). AI 0.143–0.322 for the 5 drylands + hyper-arid erg control (0.043); ≥ 47 usable S-2 dates every year for every AOI; seasons from the 1991–2020 rainfall climatology; map, climatology, availability and true-colour figures in `reports/figures/m1_aoi_*.png`. Total cost 150 requests, 24 PU |
-| [ ] | M1-T03 | Feasibility & scale | | | |
+| [x] | M1-T03 | Feasibility & scale | | 2026-11-21 | 6 AOIs × 40 000 cells → 3 240 000 `cell_season` records (smallest AOI 520 000), 34 attributes (24 without band std); schema test against §7.2. PU cost pending the pilot; rule-based projection shows the reference composite design ≈ 4.6 × the extraction budget (open question 12) |
 | [ ] | M1-T04 | Instructor discussion | | | Deferred, non-blocking |
 | [ ] | M1-T05 | Pilot extraction | | | |
 | [ ] | M1-T06 | Scaled extraction | | | |
@@ -767,6 +770,7 @@ Resolve these and record the answer in [`DECISIONS.md`](DECISIONS.md).
 9. *(Resolved 2026-11-20: personal-motivation paragraph added by the project owner.)*
 10. *(Resolved 2026-11-21: M1-T02 Catalog and true-colour checks run locally; 108 requests, 18 PU; Decision log #39, #40.)*
 11. *(Resolved 2026-11-21: final six AOIs confirmed by the project owner after re-checking the moved Urmia and Kubuqi squares; Decision log #41–#43.)*
+12. **Extraction design vs. PU budget:** the reference seasonal-composite design (20 m, 10 bands + SCL, FLOAT32, all acquisitions) projects to ~93 000 PU, about 4.6 × the 20 000 PU extraction cap; 20 m monthly index series project to ~77 000 PU (`reports/results/m1_pu_projection.csv`). Options: UINT16 output, only the six bands the nine indices need (drops B05–B07, B8A: a §7.2 schema change), fewer acquisitions per composite (e.g. least-cloudy subset), coarser requests for the monthly series, or fewer AOIs/years. *Decide after the M1-T05 pilot measures real costs. Owner: project owner.*
 
 ---
 

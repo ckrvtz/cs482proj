@@ -1,0 +1,7 @@
+product,scenario,requests,projected_pu,share_of_extraction_cap
+seasonal composites (cell_season),"A. 20 m, 10 bands + SCL, FLOAT32 (reference evalscript)",81,92903,4.65
+seasonal composites (cell_season),"B. 20 m, 10 bands + SCL, UINT16 (reflectance x 10000)",81,46452,2.32
+seasonal composites (cell_season),"C. 20 m, 6 index bands + SCL, UINT16 (B02 B03 B04 B08 B11 B12: all 9 indices; drops B05-B07, B8A)",81,29560,1.48
+seasonal composites (cell_season),"D. 100 m (cell size), 10 bands + SCL, UINT16 (no within-cell std)",81,1858,0.09
+monthly indices (cell_monthly),"E. monthly indices, 20 m, FLOAT32",504,76904,3.85
+monthly indices (cell_monthly),"F. monthly indices, 100 m, FLOAT32",504,3076,0.15
