@@ -723,7 +723,7 @@ Fill in owners and due dates. Tick tasks as they finish (`[x]`, date, note). `[~
 | [x] | M1-T02 | Select & validate AOIs | | 2026-11-21 | 6 AOIs final in `config/aois.geojson` (Urmia and Kubuqi moved by the owner). AI 0.143–0.322 for the 5 drylands + hyper-arid erg control (0.043); ≥ 47 usable S-2 dates every year for every AOI; seasons from the 1991–2020 rainfall climatology; map, climatology, availability and true-colour figures in `reports/figures/m1_aoi_*.png`. Total cost 150 requests, 24 PU |
 | [x] | M1-T03 | Feasibility & scale | | 2026-11-21 | 6 AOIs × 40 000 cells → 3 240 000 `cell_season` records (smallest AOI 520 000), 34 attributes (24 without band std); schema test against §7.2. PU cost pending the pilot; rule-based projection shows the reference composite design ≈ 4.6 × the extraction budget (open question 12) |
 | [ ] | M1-T04 | Instructor discussion | | | Deferred, non-blocking |
-| [~] | M1-T05 | Pilot extraction | | 2026-11-21 | Local run: b10 42.8 PU, c6 27.3 PU (projection accurate to ×1.02); no holes (valid count 19–35); reflectance within 0–1; harmonisation step ≤ 0.005. Dashboard: 43 PU. **Pending: confirm that a re-run printed "API requests made in this run: 0" (cache criterion)** |
+| [x] | M1-T05 | Pilot extraction | | 2026-11-21 | Local run: b10 42.8 PU, c6 27.3 PU (projection accurate to ×1.02); no holes (valid count 19–35); reflectance within 0–1; harmonisation step ≤ 0.005. Dashboard (settled): 71 PU, 3 requests. Re-run made 0 API requests (cache confirmed by the owner). |
 | [ ] | M1-T06 | Scaled extraction | | | |
 | [ ] | M1-T07 | Auxiliary data | | | |
 | [ ] | M1-T08 | Parse to tables & initial exploration | | | |
