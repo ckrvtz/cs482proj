@@ -314,3 +314,23 @@ def season_window(months: Sequence[int], year: int) -> tuple[str, str]:
     start_year = year - 1 if first > last else year
     last_day = calendar.monthrange(year, last)[1]
     return f"{start_year}-{first:02d}-01", f"{year}-{last:02d}-{last_day:02d}"
+
+
+def map_bounds(
+    lons: Sequence[float], lats: Sequence[float], pad_deg: float, snap_deg: float
+) -> list[float]:
+    """Map extent around points, padded and rounded outward to a ``snap_deg`` grid.
+
+    Rounding keeps the extent (and any cache keyed on it) unchanged when an AOI moves a
+    little. Latitudes are clipped to ±59° (CHIRPS covers 60°S–60°N).
+
+    Returns
+    -------
+    list of float
+        ``[lon_min, lat_min, lon_max, lat_max]`` in degrees.
+    """
+    lon_min = math.floor((min(lons) - pad_deg) / snap_deg) * snap_deg
+    lon_max = math.ceil((max(lons) + pad_deg) / snap_deg) * snap_deg
+    lat_min = math.floor((min(lats) - pad_deg) / snap_deg) * snap_deg
+    lat_max = math.ceil((max(lats) + pad_deg) / snap_deg) * snap_deg
+    return [max(lon_min, -180.0), max(lat_min, -59.0), min(lon_max, 180.0), min(lat_max, 59.0)]

@@ -347,26 +347,65 @@ def test_monthly_series_failure_is_not_cached_and_resumes(cfg, monkeypatch):
     assert monthly_series(cfg, "chirps", box, 2020, 2020, allow_download=False) is not None
 
 
-def test_cache_with_missing_values_is_rebuilt(cfg, monkeypatch):
-    import json as _json
-
-    from desertification.cache import sidecar_path
-
-    monkeypatch.setattr(aux_data, "read_window_means", lambda url, b, n: dict.fromkeys(b, 4.0))
-    box = {"a": [0.0, 0.0, 0.2, 0.2]}
-    df = monthly_series(cfg, "chirps", box, 2020, 2020, allow_download=True)
-    path = next((pathlib_path for pathlib_path in _cache_files(cfg)), None)
-    meta = _json.loads(sidecar_path(path).read_text())
-    meta["n_missing_values"] = 3  # simulate a gap-filled cache from the old code
-    sidecar_path(path).write_text(_json.dumps(meta))
-    assert monthly_series(cfg, "chirps", box, 2020, 2020, allow_download=False) is None
-    assert len(df) == 12
-
-
-def _cache_files(cfg):
+def _write_legacy_cache(cfg, boxes, n_missing, value=3.0):
+    """Write a cache in the old single-file format (one file for all AOIs)."""
+    from desertification.cache import save_json_with_sidecar
     from desertification.config import get_path
 
-    return sorted((get_path(cfg, "aux_cache") / "chirps").glob("monthly_*_*.json"))
+    params = {
+        "source": "chirps",
+        "url_template": cfg["climate_data"]["chirps_monthly_url"],
+        "bboxes": {k: [float(v) for v in b] for k, b in sorted(boxes.items())},
+        "years": [2020, 2020],
+        "nodata_below": cfg["climate_data"]["nodata_below"],
+    }
+    rows = [
+        {"aoi_id": a, "year": 2020, "month": m, "value": value}
+        for a in sorted(boxes)
+        for m in range(1, 13)
+    ]
+    path = get_path(cfg, "aux_cache") / "chirps" / "monthly_2020_2020.json"
+    save_json_with_sidecar(path, rows, params, extra={"n_missing_values": n_missing})
+
+
+def test_legacy_cache_reused_for_unchanged_aois_only(cfg, monkeypatch):
+    calls = []
+
+    def fake_read(url, bboxes, nodata_below):
+        calls.append(sorted(bboxes))
+        return dict.fromkeys(bboxes, 9.0)
+
+    monkeypatch.setattr(aux_data, "read_window_means", fake_read)
+    old = {"a": [0.0, 0.0, 0.2, 0.2], "b": [1.0, 1.0, 1.2, 1.2]}
+    _write_legacy_cache(cfg, old, n_missing=0)
+
+    # Unchanged boxes: served entirely from the legacy file, no downloads needed.
+    df = monthly_series(cfg, "chirps", old, 2020, 2020, allow_download=False)
+    assert df is not None and calls == [] and df["value"].eq(3.0).all()
+
+    # "b" moves: only "b" is downloaded; "a" still comes from cache.
+    moved = {"a": old["a"], "b": [1.1, 1.0, 1.3, 1.2]}
+    assert monthly_series(cfg, "chirps", moved, 2020, 2020, allow_download=False) is None
+    df = monthly_series(cfg, "chirps", moved, 2020, 2020, allow_download=True)
+    assert calls and all(c == ["b"] for c in calls) and len(calls) == 12
+    assert df.loc[df.aoi_id == "a", "value"].eq(3.0).all()
+    assert df.loc[df.aoi_id == "b", "value"].eq(9.0).all()
+
+
+def test_legacy_cache_with_gaps_is_not_reused(cfg):
+    _write_legacy_cache(cfg, {"a": [0.0, 0.0, 0.2, 0.2]}, n_missing=3)
+    assert monthly_series(cfg, "chirps", {"a": [0.0, 0.0, 0.2, 0.2]}, 2020, 2020) is None
+
+
+def test_moved_aoi_gets_a_distinct_cache_file(cfg, monkeypatch):
+    from desertification.config import get_path
+
+    monkeypatch.setattr(aux_data, "read_window_means", lambda url, b, n: dict.fromkeys(b, 1.0))
+    monthly_series(cfg, "chirps", {"a": [0.0, 0.0, 0.2, 0.2]}, 2020, 2020, allow_download=True)
+    monthly_series(cfg, "chirps", {"a": [0.5, 0.0, 0.7, 0.2]}, 2020, 2020, allow_download=True)
+    files = sorted((get_path(cfg, "aux_cache") / "chirps").glob("monthly_2020_2020_a_*.json"))
+    files = [f for f in files if not f.name.endswith(".meta.json")]
+    assert len(files) == 2  # old and new box both cached, no clash
 
 
 def test_fetch_with_retries_backoff():
@@ -477,3 +516,12 @@ def test_estimate_catalog_pu_follows_cdse_rules():
     assert estimate_catalog_pu(5e5, 3) == pytest.approx(1.0)  # 0.5 x 3 = 1.5 -> cap
     with pytest.raises(ValueError):
         estimate_catalog_pu(0, 1)
+
+
+def test_map_bounds_snap_and_stability():
+    from desertification.aoi import map_bounds
+
+    old = map_bounds([-14.5, 108.5], [13.5, 45.0], 8, 10)
+    new = map_bounds([-14.5, 109.15], [13.5, 45.0], 8, 10)  # Kubuqi moved east
+    assert old == new == [-30.0, 0.0, 120.0, 59.0]
+    assert map_bounds([0.0], [-55.0], 8, 10)[1] == -59.0

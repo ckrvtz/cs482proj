@@ -24,7 +24,12 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from desertification.cache import load_cached_json, save_json_with_sidecar, sidecar_path
+from desertification.cache import (
+    load_cached_json,
+    request_hash,
+    save_json_with_sidecar,
+    sidecar_path,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -233,8 +238,10 @@ def monthly_series(
 
     Notes
     -----
-    A cache whose sidecar records missing values (written by an older version of this
-    function) is ignored and rebuilt.
+    Each AOI is cached in its own file (name includes a hash of its box), so moving or
+    adding an AOI only downloads that AOI. Rows from the older single-file cache are reused
+    for AOIs whose box is unchanged. A failed download keeps finished months in a
+    ``.partial-<hash>.json`` file and resumes from it.
     """
     from desertification.config import get_path
 
@@ -244,39 +251,56 @@ def monthly_series(
     }
     if source not in templates:
         raise ValueError(f"unknown source {source!r}; expected one of {sorted(templates)}")
-    nodata_below = cfg["climate_data"]["nodata_below"]
-    params = {
+    climate = cfg["climate_data"]
+    nodata_below = climate["nodata_below"]
+    template = templates[source]
+    base = {
         "source": source,
-        "url_template": templates[source],
-        "bboxes": {k: list(map(float, v)) for k, v in sorted(bboxes.items())},
+        "url_template": template,
         "years": [first_year, last_year],
         "nodata_below": nodata_below,
     }
-    path = get_path(cfg, "aux_cache") / source / f"monthly_{first_year}_{last_year}.json"
-    cached = load_cached_json(path, params)
-    if cached is not None:
-        meta = json.loads(sidecar_path(path).read_text(encoding="utf-8"))
-        if meta.get("n_missing_values", 0) == 0:
-            return pd.DataFrame(cached)
-        logger.warning("Cached %s series has missing values; rebuilding it", source)
+    cache_dir = get_path(cfg, "aux_cache") / source
+    boxes = {k: [float(v) for v in b] for k, b in sorted(bboxes.items())}
+
+    # 1. Per-AOI caches (a moved or new AOI does not invalidate the others).
+    frames: dict[str, pd.DataFrame] = {}
+    for aoi_id, bbox in boxes.items():
+        path, params = aoi_cache_entry(cache_dir, base, aoi_id, bbox, first_year, last_year)
+        cached = load_cached_json(path, params)
+        if cached is not None:
+            frames[aoi_id] = pd.DataFrame(cached)
+    # 2. Rows from the older all-AOI cache file, where the AOI's box is unchanged.
+    missing = {k: b for k, b in boxes.items() if k not in frames}
+    for aoi_id, df in legacy_rows(cache_dir, base, missing, first_year, last_year).items():
+        path, params = aoi_cache_entry(
+            cache_dir, base, aoi_id, missing[aoi_id], first_year, last_year
+        )
+        save_json_with_sidecar(path, df.to_dict(orient="records"), params, extra={"migrated": True})
+        frames[aoi_id] = df
+    missing = {k: b for k, b in boxes.items() if k not in frames}
+    if not missing:
+        return _concat(frames)
     if not allow_download:
-        logger.info("No complete cached %s series for these AOIs; downloads not allowed", source)
+        logger.info(
+            "No complete cached %s series for %s; downloads not allowed", source, sorted(missing)
+        )
         return None
 
-    climate = cfg["climate_data"]
-    months = month_list(first_year, last_year)
-    template = templates[source]
-
-    # Resume from earlier partial runs (same parameters only).
-    partial_path = path.with_name(path.stem + ".partial.json")
-    partial = load_cached_json(partial_path, params) or {}
+    # 3. Download only the missing AOIs, resuming from an earlier partial run.
+    group = dict(base, bboxes=missing)
+    partial_path = (
+        cache_dir / f"monthly_{first_year}_{last_year}.partial-{request_hash(group)[:10]}.json"
+    )
+    partial = load_cached_json(partial_path, group) or {}
     done = {tuple(map(int, key.split("-"))): means for key, means in partial.items()}
+    months = month_list(first_year, last_year)
     todo = [ym for ym in months if ym not in done]
 
     def fetch(ym: tuple[int, int]) -> dict[str, float] | None:
         url = template.format(year=ym[0], month=ym[1])
         try:
-            return read_window_means(url, params["bboxes"], nodata_below)
+            return read_window_means(url, missing, nodata_below)
         except Exception as exc:  # noqa: BLE001 - one bad month must not stop the rest
             logger.warning("Could not read %s: %s", url, exc)
             return None
@@ -291,7 +315,7 @@ def monthly_series(
     done.update(fetched)
     if failed:
         save_json_with_sidecar(
-            partial_path, {f"{y}-{m:02d}": v for (y, m), v in sorted(done.items())}, params
+            partial_path, {f"{y}-{m:02d}": v for (y, m), v in sorted(done.items())}, group
         )
         examples = ", ".join(f"{y}-{m:02d}" for y, m in failed[:5])
         raise ClimateDownloadError(
@@ -300,22 +324,74 @@ def monthly_series(
             "again later and only the missing months will be fetched."
         )
 
-    rows = []
-    for (year, month), means in sorted(done.items()):
-        rows += [{"aoi_id": k, "year": year, "month": month, "value": v} for k, v in means.items()]
-    df = pd.DataFrame(rows).sort_values(["aoi_id", "year", "month"]).reset_index(drop=True)
-    n_missing = int(df["value"].isna().sum())  # NaN here = no valid pixel (e.g. ocean)
-    save_json_with_sidecar(
-        path,
-        df.to_dict(orient="records"),
-        params,
-        extra={"n_files": len(months), "n_missing_values": n_missing},
-    )
-    # The partial file was only a resume aid for this cache; the full cache supersedes it.
+    for aoi_id, bbox in missing.items():
+        rows = [
+            {"aoi_id": aoi_id, "year": y, "month": m, "value": means[aoi_id]}
+            for (y, m), means in sorted(done.items())
+        ]
+        df = pd.DataFrame(rows)
+        path, params = aoi_cache_entry(cache_dir, base, aoi_id, bbox, first_year, last_year)
+        save_json_with_sidecar(path, rows, params, extra={"n_files": len(months)})
+        frames[aoi_id] = df
+    # The partial file was only a resume aid; the per-AOI caches supersede it.
     for leftover in (partial_path, sidecar_path(partial_path)):
         leftover.unlink(missing_ok=True)
-    logger.info("Cached %d %s values at %s", len(df), source, path)
-    return df
+    logger.info("Cached %s series for %s", source, sorted(missing))
+    return _concat(frames)
+
+
+def aoi_cache_entry(
+    cache_dir: Path,
+    base: dict[str, Any],
+    aoi_id: str,
+    bbox: list[float],
+    first_year: int,
+    last_year: int,
+) -> tuple[Path, dict[str, Any]]:
+    """Cache path and request parameters for one AOI's monthly series.
+
+    The file name carries a short hash of the parameters, so a moved AOI gets a new file
+    instead of a name clash with the old one (also when caches are copied between machines).
+    """
+    params = dict(base, aoi_id=aoi_id, bbox=[float(v) for v in bbox])
+    name = f"monthly_{first_year}_{last_year}_{aoi_id}_{request_hash(params)[:10]}.json"
+    return cache_dir / name, params
+
+
+def legacy_rows(
+    cache_dir: Path,
+    base: dict[str, Any],
+    boxes: dict[str, list[float]],
+    first_year: int,
+    last_year: int,
+) -> dict[str, pd.DataFrame]:
+    """Reuse rows from the older single-file cache (``monthly_<y0>_<y1>.json``).
+
+    Rows are taken only for AOIs whose box is unchanged, and only if that file was
+    complete and made with the same source, URL template, years and nodata threshold.
+    """
+    path = cache_dir / f"monthly_{first_year}_{last_year}.json"
+    meta_path = sidecar_path(path)
+    if not boxes or not (path.is_file() and meta_path.is_file()):
+        return {}
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    request = meta.get("request", {})
+    if meta.get("n_missing_values", 1) != 0 or any(request.get(k) != v for k, v in base.items()):
+        return {}
+    old_boxes = request.get("bboxes", {})
+    reusable = [k for k, b in boxes.items() if old_boxes.get(k) == [float(v) for v in b]]
+    if not reusable:
+        return {}
+    df = pd.DataFrame(json.loads(path.read_text(encoding="utf-8")))
+    return {k: df[df["aoi_id"] == k].reset_index(drop=True) for k in reusable}
+
+
+def _concat(frames: dict[str, pd.DataFrame]) -> pd.DataFrame:
+    return (
+        pd.concat([frames[k] for k in sorted(frames)], ignore_index=True)
+        .sort_values(["aoi_id", "year", "month"])
+        .reset_index(drop=True)
+    )
 
 
 def rainfall_overview(

@@ -38,6 +38,8 @@ All entries below were checked against the linked official pages on 2026-11-20 u
 
 <!-- Author(s) (year). Title. Venue. DOI/URL. One line on what we used it for. -->
 
+- `[VERIFY]` **Kubuqi re-greening area** (109°00'–110°45' E, 40°00'–40°30' N), from a paper found by the project owner; used to place the Kubuqi AOI (Decision log #41). Full citation (authors, year, title, venue, DOI) to be added.
+
 ## Reused or adapted code
 
 <!-- Source URL — what was adapted and where (file path). -->

@@ -31,19 +31,20 @@ candidates:
 
   - aoi_id: kubuqi
     name: Kubuqi Desert, Inner Mongolia (CN)
-    centre_lat: 40.2
-    centre_lon: 108.5
+    centre_lat: 40.19
+    centre_lon: 109.15
     role: improving_control
     expected_dynamic: Afforestation / re-greening
+    notes: Moved from (40.2, 108.5) (2026-11-21, project owner) to visible re-greening inside the re-greening area 109°00'-110°45' E, 40°00'-40°30' N reported in a paper found by the project owner [VERIFY citation in docs/REFERENCES.md].
     include: true
 
   - aoi_id: urmia
     name: Lake Urmia basin, Iran
     centre_lat: 37.7
-    centre_lon: 45.3
+    centre_lon: 45.19
     role: degrading
     expected_dynamic: Lake shrinkage, salt flats, agricultural pressure
-    notes: Centre is on the lake itself; may need moving to the shore/farmland after the imagery check.
+    notes: Moved west from 45.3 (2026-11-21, project owner) so the square covers shore and farmland, not mostly lake (M1-T02 true-colour check).
     include: true
 
   - aoi_id: erg
