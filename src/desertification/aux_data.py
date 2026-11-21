@@ -18,6 +18,7 @@ import math
 import time
 from collections.abc import Callable, Iterable
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -386,17 +387,26 @@ def rainfall_overview(
 
     climate = cfg["climate_data"]
     months = month_list(first_year, last_year)
-    results, failed = fetch_with_retries(
-        months,
+
+    # Resume from an earlier partial run (same parameters only).
+    partial_path = path.with_name(path.stem + ".partial.npz")
+    results = load_partial_arrays(partial_path) if cached_file_valid(partial_path, params) else {}
+    todo = [ym for ym in months if ym not in results]
+    fetched, failed = fetch_with_retries(
+        todo,
         read,
         max_workers=climate.get("max_workers", 2),
         retry_rounds=climate.get("retry_rounds", 3),
         backoff_s=climate.get("retry_backoff_s", 20),
     )
+    results.update(fetched)
     if failed:
+        save_partial_arrays(partial_path, results)
+        write_sidecar(partial_path, params, extra={"n_months_done": len(results)})
         raise ClimateDownloadError(
             f"{len(failed)} of {len(months)} CHIRPS overview files could not be read; the "
-            "server may be rate-limiting (HTTP 429). Run again later."
+            f"server may be rate-limiting (HTTP 429). {len(results)} months are saved; run "
+            "again later and only the missing months will be fetched."
         )
     n_years = last_year - first_year + 1
     rain = np.sum([results[ym][0] for ym in months], axis=0) / n_years
@@ -404,4 +414,30 @@ def rainfall_overview(
     path.parent.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(path, rain=rain, extent=np.array(extent))
     write_sidecar(path, params)
+    # The partial file was only a resume aid for this cache; the full cache supersedes it.
+    for leftover in (partial_path, sidecar_path(partial_path)):
+        leftover.unlink(missing_ok=True)
     return rain, extent
+
+
+def save_partial_arrays(
+    path: Path, results: dict[tuple[int, int], tuple[np.ndarray, list[float]]]
+) -> None:
+    """Save per-month ``(array, extent)`` results to one ``.npz`` (keys ``m_YYYY_MM``)."""
+    payload = {}
+    for (year, month), (arr, extent) in results.items():
+        payload[f"m_{year}_{month:02d}"] = arr
+        payload[f"e_{year}_{month:02d}"] = np.asarray(extent, dtype=float)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    np.savez_compressed(path, **payload)
+
+
+def load_partial_arrays(path: Path) -> dict[tuple[int, int], tuple[np.ndarray, list[float]]]:
+    """Inverse of :func:`save_partial_arrays`; returns ``{(year, month): (array, extent)}``."""
+    out = {}
+    with np.load(path) as npz:
+        for key in npz.files:
+            if key.startswith("m_"):
+                _, year, month = key.split("_")
+                out[(int(year), int(month))] = (npz[key], npz[f"e_{year}_{month}"].tolist())
+    return out

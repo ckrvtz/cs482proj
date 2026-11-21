@@ -397,3 +397,71 @@ def test_clean_overview():
     assert np.isnan(out[0]) and np.isnan(out[1])
     assert out[2] == 0.0 and out[3] == 0.0 and out[4] == pytest.approx(12.5)
     assert out.dtype == np.float32
+
+
+def test_rainfall_overview_resumes_from_partial(cfg, monkeypatch):
+    """A failed month is retried on the next run; months already read are not re-fetched."""
+    from desertification.aux_data import ClimateDownloadError, rainfall_overview
+    from desertification.config import get_path
+
+    calls = []
+    failing = {"2020-07"}
+
+    class FakeDataset:
+        """Minimal stand-in for a rasterio dataset on the CHIRPS 0.05° grid."""
+
+        transform = GRID_005
+        width, height = 7200, 2400
+
+        def __init__(self, url):
+            self.url = url
+
+        def __enter__(self):
+            key = self.url.split("chirps-v3.0.")[1][:7].replace(".", "-")
+            calls.append(key)
+            if key in failing:
+                raise OSError("HTTP 429")
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def read(self, band, window, out_shape):
+            return np.full(out_shape, 10.0, dtype="float32")  # 10 mm every month
+
+    import rasterio
+
+    monkeypatch.setattr(rasterio, "open", lambda url: FakeDataset(url))
+    bounds = [0.0, 10.0, 4.0, 14.0]
+    with pytest.raises(ClimateDownloadError, match="1 of 12"):
+        rainfall_overview(cfg, bounds, 2020, 2020, decimation=8, allow_download=True)
+    partial = get_path(cfg, "aux_cache") / "chirps" / "overview_2020_2020.partial.npz"
+    assert partial.is_file()
+    assert calls.count("2020-01") == 1 and calls.count("2020-07") == 4  # 1 + 3 retry rounds
+
+    calls.clear()
+    failing.clear()
+    rain, extent = rainfall_overview(cfg, bounds, 2020, 2020, decimation=8, allow_download=True)
+    assert calls == ["2020-07"]  # only the missing month
+    assert rain.shape == (10, 10) and np.allclose(rain, 120.0)  # 12 x 10 mm
+    assert extent == pytest.approx([0.0, 4.0, 10.0, 14.0])
+    assert not partial.exists()
+    assert rainfall_overview(cfg, bounds, 2020, 2020, decimation=8) is not None  # cached
+
+
+def test_partial_arrays_round_trip(tmp_path):
+    from desertification.aux_data import load_partial_arrays, save_partial_arrays
+
+    data = {
+        (2020, 1): (np.ones((2, 3), "float32"), [0.0, 1.0, 2.0, 3.0]),
+        (2021, 12): (np.zeros((2, 3), "float32"), [0.0, 1.0, 2.0, 3.0]),
+    }
+    save_partial_arrays(tmp_path / "p.npz", data)
+    back = load_partial_arrays(tmp_path / "p.npz")
+    assert set(back) == set(data)
+    assert np.array_equal(back[(2020, 1)][0], data[(2020, 1)][0]) and back[(2021, 12)][1] == [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+    ]
