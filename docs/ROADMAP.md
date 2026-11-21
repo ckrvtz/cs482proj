@@ -245,7 +245,7 @@ Document licence and citation for each one in `docs/REFERENCES.md` when you firs
 ## 4. Study design
 
 ### 4.1 Areas of interest (AOIs)
-Choose **4–6 AOIs**, each about **20 km × 20 km** (so one Process API request at 20 m is ≤ 1000 × 1000 px), covering different dynamics. These are **candidate starting points with approximate centres**; `M1-T02` must confirm each with imagery, the aridity index and data availability, then fix the exact bounding boxes in `config/aois.geojson`.
+Choose **4–6 AOIs**, each about **20 km × 20 km** (so one Process API request at 20 m is ≤ 1000 × 1000 px), covering different dynamics. These were candidate starting points; **M1-T02 confirmed the final six** (centres below; exact squares in `config/aois.geojson`, evidence in `reports/milestone1/sources.md` §7).
 
 | Candidate AOI | Approx. centre (lat, lon) | Expected dynamic | Role |
 |---|---|---|---|
@@ -254,7 +254,7 @@ Choose **4–6 AOIs**, each about **20 km × 20 km** (so one Process API request
 | Fakara / Tillabéri, Niger (Sahel) | ~13.5, 2.6 | Cropland expansion, fallow loss | Mixed |
 | Kubuqi Desert, Inner Mongolia (CN) | 40.19, 109.15 (moved in M1-T02, Decision log #41) | Afforestation / re-greening | Improving (control) |
 | Lake Urmia basin, Iran | 37.7, 45.19 (moved west in M1-T02, Decision log #41) | Lake shrinkage, salt flats, agricultural pressure | Degrading |
-| Stable hyper-arid erg: Grand Erg Occidental, Algeria | ~30.6, 0.6 (chosen in M1-T02; `[VERIFY]` on imagery) | Stable bare sand | Stable (control) |
+| Stable hyper-arid erg: Grand Erg Occidental, Algeria | 30.6, 0.6 (chosen in M1-T02; dunes confirmed on imagery) | Stable bare sand | Stable (control) |
 
 Per-AOI config (in `config/aois.geojson` properties or `config/project.yaml`): `aoi_id`, `name`, `bbox_wgs84`, `utm_epsg`, `wet_season_months`, `dry_season_months`, `role`, `aridity_index`, `notes`.
 **Seasons are AOI-specific** (e.g. the Sahel wet season is roughly Jun–Oct). Don't use calendar seasons across AOIs.
@@ -716,7 +716,7 @@ Fill in owners and due dates. Tick tasks as they finish (`[x]`, date, note). `[~
 | [x] | P0-T02 | Environment & dependencies | | 2026-11-20 | Pinned Python 3.12 env; verified in a fresh cloud venv (CPU) and on the local machine with the GTX 1080 Ti: all imports OK, GPU matmul OK, 15/15 tests pass (Decision log #17) |
 | [x] | P0-T03 | CDSE credentials & connectivity | | 2026-11-20 | Local run: Catalog search over `ferlo_test`, Jan 2023 returned 6 scenes (tile 28PEC; cloud cover 0–98.7%, median 37.2%; 2 scenes < 10%). Ledger updated; 0 PU and 1 request charged |
 | [x] | M1-T01 | Document candidate sources | | 2026-11-20 | `reports/milestone1/sources.md`: both sources and the auxiliary datasets documented from official docs (links, quotes, access date), with the project owner's personal-motivation paragraph; builds to PDF with no warnings. Aridity-index facts left `[VERIFY]` for M1-T02 |
-| [~] | M1-T02 | Select & validate AOIs | | 2026-11-21 | Evidence complete for the original six; owner moved Lake Urmia (lon 45.3 → 45.19) and Kubuqi (to 40.19 N, 109.15 E). **Pending: local re-run of `notebooks/01b_aoi_selection.ipynb` with `ALLOW_API_CALLS = True` to re-check the two moved AOIs (~28 Catalog pages + 4 images, ~5 PU), then commit its outputs** |
+| [x] | M1-T02 | Select & validate AOIs | | 2026-11-21 | 6 AOIs final in `config/aois.geojson` (Urmia and Kubuqi moved by the owner). AI 0.143–0.322 for the 5 drylands + hyper-arid erg control (0.043); ≥ 47 usable S-2 dates every year for every AOI; seasons from the 1991–2020 rainfall climatology; map, climatology, availability and true-colour figures in `reports/figures/m1_aoi_*.png`. Total cost 150 requests, 24 PU |
 | [ ] | M1-T03 | Feasibility & scale | | | |
 | [ ] | M1-T04 | Instructor discussion | | | Deferred, non-blocking |
 | [ ] | M1-T05 | Pilot extraction | | | |
@@ -766,7 +766,7 @@ Resolve these and record the answer in [`DECISIONS.md`](DECISIONS.md).
 8. Trends.Earth licence: README says GPL v2.0 or later, but the repository also contains an Apache-2.0 file. *Verify before citing (only if used).*
 9. *(Resolved 2026-11-20: personal-motivation paragraph added by the project owner.)*
 10. *(Resolved 2026-11-21: M1-T02 Catalog and true-colour checks run locally; 108 requests, 18 PU; Decision log #39, #40.)*
-11. **Final AOI choice:** owner moved Lake Urmia and Kubuqi on 2026-11-21 (Decision log #41); confirm both on the re-run's true-colour images. Kubuqi source: Guo et al. (2025), verified (Decision log #42). *Owner: project owner.*
+11. *(Resolved 2026-11-21: final six AOIs confirmed by the project owner after re-checking the moved Urmia and Kubuqi squares; Decision log #41–#43.)*
 
 ---
 

@@ -78,26 +78,26 @@ As climate change continues to accelerate and ravage our natural world, I believ
 
 ## 7. Study areas (M1-T02)
 
-*Climate, availability and imagery checks are complete (`notebooks/01b_aoi_selection.ipynb`). Final AOI choice is the project owner's; Lake Urmia and Kubuqi are under review (ROADMAP §12).*
+*Final AOIs (`config/aois.geojson`), confirmed by the project owner on 2026-11-21 after the climate, availability and imagery checks in `notebooks/01b_aoi_selection.ipynb`.*
 
 Six candidate areas of about 20 km × 20 km each cover the dynamics we want to separate: degradation (Aral Sea, Lake Urmia), mixed rainfall- and land-use-driven change (two Sahel sites), re-greening (Kubuqi) and a stable hyper-arid control (an erg in the Sahara) (`reports/figures/m1_aoi_map.png`). Each AOI is a square in the UTM zone of its centre with edges on the 100 m cell grid; geometry and properties are in `config/aois.geojson`.
 
-**Aridity.** Following the UNCCD definition (annual precipitation ÷ potential evapotranspiration between 0.05 and 0.65), the aridity index is mean annual CHIRPS v3 rainfall divided by mean annual Hobbins reference evapotranspiration, 1991–2020. Five candidates are drylands (0.14–0.24, arid to semi-arid); the erg is hyper-arid (0.043) and is kept deliberately as a stable control.
+**Aridity.** Following the UNCCD definition (annual precipitation ÷ potential evapotranspiration between 0.05 and 0.65), the aridity index is mean annual CHIRPS v3 rainfall divided by mean annual Hobbins reference evapotranspiration, 1991–2020. Five AOIs are drylands (0.14–0.32, arid to semi-arid); the erg is hyper-arid (0.043) and is kept deliberately as a stable control.
 
-**Seasons.** The wet season is the wettest four consecutive months of the 1991–2020 rainfall climatology and the dry season the driest four (`reports/figures/m1_aoi_climatology.png`). The Sahel sites are strongly seasonal (92–93 % of rain in the wet season), Kubuqi has summer monsoon rain (76 %), and the Aral Sea and Lake Urmia receive winter–spring rain. At the erg, rain is too scarce for seasons to matter.
+**Seasons.** The wet season is the wettest four consecutive months of the 1991–2020 rainfall climatology and the dry season the driest four (`reports/figures/m1_aoi_climatology.png`). The Sahel sites are strongly seasonal (92–93 % of rain in the wet season), Kubuqi has summer monsoon rain (77 %), and the Aral Sea and Lake Urmia receive winter–spring rain. At the erg, rain is too scarce for seasons to matter.
 
 | AOI | Role | Rainfall (mm/yr) | Ref. ET (mm/yr) | Aridity index | Class | Wet season (share of rain) | Dry season | Usable S-2 dates/yr (min) |
 |---|---|---|---|---|---|---|---|---|
 | Aral Sea / Aralkum (UZ/KZ) | degrading | 185 | 1288 | 0.143 | dryland | Dec–Mar (45 %) | Jun–Sep | 69 |
 | Ferlo, Senegal | mixed | 438 | 2565 | 0.171 | dryland | Jul–Oct (92 %) | Jan–Apr | 47 |
 | Fakara / Tillabéri, Niger | mixed | 510 | 2323 | 0.219 | dryland | Jun–Sep (93 %) | Nov–Feb | 47 |
-| Kubuqi Desert, Inner Mongolia | improving control | 292 | 1239 | 0.236 | dryland | Jun–Sep (76 %) | Nov–Feb | 39 |
-| Lake Urmia basin, Iran | degrading | 269 | 1404 | 0.192 | dryland | Feb–May (54 %) | Jun–Sep | 89 |
+| Kubuqi Desert, Inner Mongolia | improving control | 383 | 1190 | 0.322 | dryland | Jun–Sep (77 %) | Nov–Feb | 73 |
+| Lake Urmia basin, Iran | degrading | 276 | 1309 | 0.211 | dryland | Feb–May (55 %) | Jun–Sep | 100 |
 | Grand Erg Occidental, Algeria | stable control | 92 | 2151 | 0.043 | hyper-arid | Jan–Apr (46 %) | May–Aug | 126 |
 
-**Sentinel-2 availability.** Every candidate exceeds the target of 20 usable acquisition dates per year in every year 2019–2025 (a date is usable if a product covering the AOI that day has tile cloud cover of at most 40 %). The minimum per AOI ranges from 39 (Kubuqi) to 126 (the erg); counts rise in 2025 when Sentinel-2C joined (`reports/figures/m1_aoi_availability.png`).
+**Sentinel-2 availability.** Every candidate exceeds the target of 20 usable acquisition dates per year in every year 2019–2025 (a date is usable if a product covering the AOI that day has tile cloud cover of at most 40 %). The minimum per AOI ranges from 47 (the two Sahel sites) to 126 (the erg); counts rise in 2025 when Sentinel-2C joined (`reports/figures/m1_aoi_availability.png`).
 
-**Imagery check.** Dry-season true-colour images for 2019 and 2025 (`reports/figures/m1_aoi_true_color.png`) show exposed seabed at the Aral Sea, rangeland and laterite plateau at the two Sahel sites, and uniform dunes at the erg, as expected. At Lake Urmia most of the square is lake: open water in 2019 and a white salt flat in 2025, which is lake desiccation rather than land degradation. The Kubuqi square shows sandy land and a salt lake with little visible change.
+**Imagery check.** Dry-season true-colour images for 2019 and 2025 (`reports/figures/m1_aoi_true_color.png`) show exposed seabed at the Aral Sea, rangeland and laterite plateau at the two Sahel sites, and uniform dunes at the erg, as expected. Two AOIs were moved after this check. At its first position the Lake Urmia square was mostly lake (open water in 2019, salt flat in 2025: lake desiccation rather than land degradation); it was moved about 10 km west (37.7 N, 45.19 E) and now covers farmland and shore, with the receding lake on its eastern edge. The first Kubuqi square showed sand and a salt lake with no re-greening; it was moved to 40.19 N, 109.15 E, inside the Kubuqi Desert Closed Reserve in Dalat County, where shrub sand-fixation plantations have been studied (Guo et al., 2025), and now shows planted patches among dunes plus some centre-pivot cropland.
 
 Sources: `reports/results/m1_aoi_climate.csv`, `m1_aoi_summary.csv`, `m1_aoi_availability.csv`. Rainfall: CHIRPS v3; reference ET: Hobbins ETo (Climate Hazards Center). Imagery: contains modified Copernicus Sentinel data 2019, 2025, processed by Sentinel Hub.
 
