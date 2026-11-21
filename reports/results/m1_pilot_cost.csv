@@ -1,0 +1,4 @@
+request,bands,projected_pu,reported_pu,dashboard_total_pu
+composite b10,10,42.0,42.83587230702324,43
+composite c6,6,26.7,27.259189948836138,43
+statistics (harmonisation),4,0.4,,43
