@@ -60,6 +60,10 @@ pilot:
   designs:                     # all UINT16 (Decision log #45)
     b10: [B02, B03, B04, B05, B06, B07, B08, B8A, B11, B12]
     c6: [B02, B03, B04, B08, B11, B12]   # the six bands the nine indices need
+  low_cloud_test:             # does a scene cloud filter cut the charged samples? (open question 12)
+    design: c6
+    max_cloud_cover: 0.4       # = aoi_selection.usable_cloud_pct / 100
+  monthly_bands: [B02, B04, B08, B11, B12]   # monthly series inputs: NDVI, MSAVI2, BSI, albedo (+ SCL)
   harmonisation:
     aoi_id: erg                # stable bright sand
     window_m: 1000

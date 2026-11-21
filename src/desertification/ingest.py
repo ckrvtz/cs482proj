@@ -217,6 +217,7 @@ def download_composite(
     label: str = "",
     allow_api: bool = False,
     request_fn: Callable[..., Any] | None = None,
+    max_cloud_cover: float | None = None,
 ) -> tuple[Path | None, bool, float | None]:
     """Cloud-masked median composite (UINT16, reflectance x 10000) for one AOI and window.
 
@@ -244,6 +245,10 @@ def download_composite(
     request_fn : callable, optional
         Replacement for the Process API call (tests). Must return an object with
         ``.decode()`` (giving an (H, W, bands+1) array) and ``.headers``.
+    max_cloud_cover : float, optional
+        Scene filter, 0–1: only acquisitions whose tile cloud cover is at most this value
+        are passed to the evalscript (sentinelhub ``maxcc``). None means no filter. Only
+        added to the cache key when set, so unfiltered caches stay valid.
 
     Returns
     -------
@@ -276,6 +281,10 @@ def download_composite(
         "harmonize_values": "default (true)",
         "format": "image/tiff",
     }
+    if max_cloud_cover is not None:
+        if not 0 <= max_cloud_cover <= 1:
+            raise ValueError("max_cloud_cover must be between 0 and 1")
+        params["max_cloud_cover"] = float(max_cloud_cover)
     suffix = f"_{label}" if label else ""
     name = f"{start}_{end}_{int(resolution)}m{suffix}.tif"
     path = get_path(cfg, "data_raw") / aoi_id / name
@@ -294,7 +303,9 @@ def download_composite(
                 evalscript=evalscript,
                 input_data=[
                     SentinelHubRequest.input_data(
-                        data_collection=get_s2l2a_collection(cfg), time_interval=(start, end)
+                        data_collection=get_s2l2a_collection(cfg),
+                        time_interval=(start, end),
+                        maxcc=max_cloud_cover,
                     )
                 ],
                 responses=[SentinelHubRequest.output_response("default", MimeType.TIFF)],

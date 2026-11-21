@@ -1,0 +1,9 @@
+seasonal_design,monthly_resolution_m,acquisitions,seasonal_pu,monthly_pu,total_pu,share_of_extraction_cap
+c6,100,low-cloud only (unmeasured),5149,268,5417,0.27
+c6,100,all,7540,392,7932,0.4
+b10,100,low-cloud only (unmeasured),8092,268,8360,0.42
+c6,20,low-cloud only (unmeasured),5149,6702,11851,0.59
+b10,100,all,11849,392,12241,0.61
+b10,20,low-cloud only (unmeasured),8092,6702,14794,0.74
+c6,20,all,7540,9808,17348,0.87
+b10,20,all,11849,9808,21657,1.08

@@ -145,3 +145,37 @@ def harmonisation_ok(steps: pd.DataFrame, tolerance: float, min_pairs: int = 3) 
         and (steps["n_pairs"] >= min_pairs).all()
         and (steps["median_step"].abs() <= tolerance).all()
     )
+
+
+def compare_composites(
+    a: np.ndarray, b: np.ndarray, valid: np.ndarray, scale: float = DN_SCALE
+) -> dict[str, float]:
+    """Compare one band of two composites over pixels valid in both.
+
+    Parameters
+    ----------
+    a, b : numpy.ndarray
+        Same band (harmonised DN) from two composites of the same area and window.
+    valid : numpy.ndarray of bool
+        Pixels to compare.
+    scale : float
+        DN per unit reflectance.
+
+    Returns
+    -------
+    dict
+        Median and 99th percentile of |a - b| and the median of (a - b), in reflectance.
+    """
+    m = np.asarray(valid, dtype=bool)
+    d = (np.asarray(a, dtype=float)[m] - np.asarray(b, dtype=float)[m]) / scale
+    if d.size == 0:
+        return {
+            "median_abs_diff": float("nan"),
+            "p99_abs_diff": float("nan"),
+            "median_diff": float("nan"),
+        }
+    return {
+        "median_abs_diff": float(np.median(np.abs(d))),
+        "p99_abs_diff": float(np.percentile(np.abs(d), 99)),
+        "median_diff": float(np.median(d)),
+    }

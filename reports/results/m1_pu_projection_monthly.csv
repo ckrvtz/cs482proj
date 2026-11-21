@@ -1,0 +1,5 @@
+product,resolution_m,acquisitions,requests,projected_pu
+monthly series,20,all,504,9808
+monthly series,20,low-cloud only (unmeasured),504,6702
+monthly series,100,all,504,392
+monthly series,100,low-cloud only (unmeasured),504,268

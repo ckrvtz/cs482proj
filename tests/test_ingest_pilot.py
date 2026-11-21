@@ -218,3 +218,38 @@ def test_sub_window():
     assert sub_window([0, 0, 20000, 20000], 5000, 100) == [7500.0, 7500.0, 12500.0, 12500.0]
     with pytest.raises(ValueError):
         sub_window([0, 0, 1000, 1000], 5000, 100)
+
+
+def test_download_composite_cloud_filter_is_part_of_the_cache_key(cfg):
+    image = np.dstack([np.full((250, 250), 1000), np.full((250, 250), 5)])
+    calls = []
+
+    def fake():
+        calls.append(1)
+        return FakeResponse(image)
+
+    args = (cfg, "aral", BBOX, 32641, "2023-06-01", "2023-09-30", 20)
+    plain, _, _ = download_composite(
+        *args, bands=["B04"], label="a", allow_api=True, request_fn=fake
+    )
+    meta = json.loads(sidecar_path(plain).read_text())
+    assert "max_cloud_cover" not in meta["request"]  # unfiltered caches keep their old hash
+    filtered, called, _ = download_composite(
+        *args, bands=["B04"], label="lc", allow_api=True, request_fn=fake, max_cloud_cover=0.4
+    )
+    assert called and filtered != plain and len(calls) == 2
+    assert json.loads(sidecar_path(filtered).read_text())["request"]["max_cloud_cover"] == 0.4
+    with pytest.raises(ValueError):
+        download_composite(*args, bands=["B04"], label="x", max_cloud_cover=40)
+
+
+def test_compare_composites():
+    from desertification.qa import compare_composites
+
+    a = np.array([1000, 2000, 3000, 0])
+    b = np.array([1100, 2000, 2900, 0])
+    out = compare_composites(a, b, np.array([True, True, True, False]))
+    assert out["median_abs_diff"] == pytest.approx(0.01) and out["median_diff"] == pytest.approx(
+        0.0
+    )
+    assert np.isnan(compare_composites(a, b, np.zeros(4, bool))["median_diff"])
