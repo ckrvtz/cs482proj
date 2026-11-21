@@ -92,7 +92,7 @@ That is **3 240 000 `cell_season` records**; the smallest AOI alone gives 520 00
 
 Both counts exceed the Milestone 1 minimum by orders of magnitude, so we can also subsample (e.g. for the manual validation set or faster model tuning) without running short.
 
-**Processing-unit cost: pending the pilot (M1-T05).** Using the official CDSE PU rules and the acquisition counts from M1-T02, the projected costs of the planned downloads are:
+**Processing-unit cost (projected in M1-T03, measured in M1-T05).** Using the official CDSE PU rules and the acquisition counts from M1-T02, the projected costs of the planned downloads are:
 
 | Product | Design | Requests | Projected PU | × extraction budget |
 |----------|--------------------------|------|--------|--------|
@@ -106,6 +106,23 @@ Both counts exceed the Milestone 1 minimum by orders of magnitude, so we can als
 A seasonal composite passes every acquisition in the season to the evalscript, and each one is charged as a data sample, so the reference design (A) would cost about 4.6 times the 20 000 PU extraction budget. Integer output, keeping only the six bands that the nine indices need, or requesting coarser pixels brings it down. Coarser requests use nearest-pixel downsampling by default, not a cell mean, and lose the within-cell standard deviation. The pilot measures the real cost per request before the design is chosen.
 
 Sources: `reports/results/m1_feasibility.csv`, `m1_attributes.csv`, `m1_pu_projection.csv` (`notebooks/01c_feasibility.ipynb`).
+
+**Measured in the pilot (M1-T05).** Two composites of a 5 km × 5 km window at the Aral Sea (dry season 2023, 16-bit output) cost 42.8 PU with 10 bands and 27.3 PU with the six index bands, against 42.0 and 26.7 projected: the rule-based projection is accurate to a factor of 1.02. The service reports the PU of each request in a response header, which the download code records. The same composites had no cloud-mask holes over the salt crust (every pixel kept 19–35 valid acquisitions), all reflectances were within 0–1 (largest 99th percentile 0.52, share above 1: 0%), and over the stable erg no band shifted by more than 0.005 in reflectance across the 2022-01-25 processing-baseline change, confirming Sentinel Hub's harmonisation (`reports/figures/m1_pilot_composite.png`, `m1_harmonisation.png`).
+
+Recomputed with the measured factor, for 16-bit designs only:
+
+| Design | AOI square | Acquisitions | Projected PU | × extraction budget |
+|------|------|----------------|------|------|
+| b10 | 20 km | all | 47 395 | 2.37 |
+| b10 | 20 km | low-cloud only (unmeasured) | 32 367 | 1.62 |
+| b10 | 10 km | all | 11 849 | 0.59 |
+| b10 | 10 km | low-cloud only (unmeasured) | 8 092 | 0.40 |
+| c6 | 20 km | all | 30 160 | 1.51 |
+| c6 | 20 km | low-cloud only (unmeasured) | 20 597 | 1.03 |
+| c6 | 10 km | all | 7 540 | 0.38 |
+| c6 | 10 km | low-cloud only (unmeasured) | 5 149 | 0.26 |
+
+The full plan (20 km squares, every acquisition) does not fit the 20 000 PU extraction budget with either band set; smaller squares or fewer acquisitions per composite do. Sources: `reports/results/m1_pilot_cost.csv`, `m1_pilot_qa.csv`, `m1_harmonisation.csv`, `m1_pu_projection_calibrated.csv`.
 
 ## 6. Implications for the rest of the project
 
