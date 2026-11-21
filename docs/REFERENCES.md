@@ -38,7 +38,7 @@ All entries below were checked against the linked official pages on 2026-11-20 u
 
 <!-- Author(s) (year). Title. Venue. DOI/URL. One line on what we used it for. -->
 
-- `[VERIFY]` **Kubuqi re-greening area** (109°00'–110°45' E, 40°00'–40°30' N), from a paper found by the project owner; used to place the Kubuqi AOI (Decision log #41). Full citation (authors, year, title, venue, DOI) to be added.
+- Guo, X., Yang, G., Wang, C., Ren, Y., Han, X., Wang, N., Jia, G., & Qiao, S. (2025). Improvement effects of different shrub sand fixation plantations on vegetation and soil in the Kubuqi Desert. *Frontiers in Plant Science*, 16, 1688154. https://doi.org/10.3389/fpls.2025.1688154. Section 2.1 locates the Kubuqi Desert Closed Reserve in Dalat County, Ordos (109°00'–110°45' E, 40°00'–40°30' N), where shrub sand-fixation plantations were studied; used to place the Kubuqi AOI (Decision log #41, #42). Checked against the article page on 2026-11-21.
 
 ## Reused or adapted code
 

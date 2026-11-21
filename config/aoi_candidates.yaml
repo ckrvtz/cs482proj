@@ -35,7 +35,7 @@ candidates:
     centre_lon: 109.15
     role: improving_control
     expected_dynamic: Afforestation / re-greening
-    notes: Moved from (40.2, 108.5) (2026-11-21, project owner) to visible re-greening inside the re-greening area 109°00'-110°45' E, 40°00'-40°30' N reported in a paper found by the project owner [VERIFY citation in docs/REFERENCES.md].
+    notes: Moved from (40.2, 108.5) (2026-11-21, project owner) to visible re-greening inside the Kubuqi Desert Closed Reserve, Dalat County (109°00'-110°45' E, 40°00'-40°30' N), site of shrub sand-fixation plantations (Guo et al. 2025, Front. Plant Sci. 16:1688154, section 2.1).
     include: true
 
   - aoi_id: urmia

@@ -766,7 +766,7 @@ Resolve these and record the answer in [`DECISIONS.md`](DECISIONS.md).
 8. Trends.Earth licence: README says GPL v2.0 or later, but the repository also contains an Apache-2.0 file. *Verify before citing (only if used).*
 9. *(Resolved 2026-11-20: personal-motivation paragraph added by the project owner.)*
 10. *(Resolved 2026-11-21: M1-T02 Catalog and true-colour checks run locally; 108 requests, 18 PU; Decision log #39, #40.)*
-11. **Final AOI choice:** owner moved Lake Urmia and Kubuqi on 2026-11-21 (Decision log #41); confirm both on the re-run's true-colour images. The Kubuqi re-greening reference still needs its full citation in `docs/REFERENCES.md`. *Owner: project owner.*
+11. **Final AOI choice:** owner moved Lake Urmia and Kubuqi on 2026-11-21 (Decision log #41); confirm both on the re-run's true-colour images. Kubuqi source: Guo et al. (2025), verified (Decision log #42). *Owner: project owner.*
 
 ---
 
