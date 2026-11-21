@@ -203,7 +203,8 @@ def summarize_scenes(features: list[dict[str, Any]]) -> pd.DataFrame:
     if not rows:
         return pd.DataFrame(columns=columns)
     df = pd.DataFrame(rows).drop_duplicates(subset="id")
-    df["datetime"] = pd.to_datetime(df["datetime"], utc=True)
+    # Catalog timestamps mix "…:56Z" and "…:56.123Z"; ISO8601 parses both (inference fails).
+    df["datetime"] = pd.to_datetime(df["datetime"], utc=True, format="ISO8601")
     df["date"] = df["datetime"].dt.date
     df["cloud_cover_pct"] = pd.to_numeric(df["cloud_cover_pct"], errors="coerce")
     return df[columns].sort_values("datetime").reset_index(drop=True)

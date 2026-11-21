@@ -205,3 +205,31 @@ def test_search_catalog_wiring(cfg, monkeypatch):
     assert captured["time"] == ("2023-01-01", "2023-01-31")
     assert captured["bbox"].crs == sentinelhub.CRS.WGS84
     assert tuple(captured["bbox"]) == tuple(bbox)
+
+
+def test_summarize_scenes_mixed_timestamp_formats():
+    """Regression: Catalog results mix timestamps with and without fractional seconds."""
+    from desertification.aoi import availability_by_year
+
+    feats = [
+        feature(
+            "S2A_MSIL2A_20220612T065656_N0400_R063_T41TNK_20220612T090000.SAFE",
+            "2022-06-12T06:56:56Z",
+            3.0,
+        ),
+        feature(
+            "S2B_MSIL2A_20220617T065659_N0400_R063_T41TNK_20220617T090000.SAFE",
+            "2022-06-17T06:56:59.024Z",
+            50.0,
+        ),
+        feature(
+            "S2A_MSIL2A_20220622T065701_N0400_R063_T41TNK_20220622T090000.SAFE",
+            "2022-06-22T06:57:01.5+00:00",
+            20.0,
+        ),
+    ]
+    df = summarize_scenes(feats)
+    assert len(df) == 3 and str(df["datetime"].dt.tz) == "UTC"
+    assert [str(d) for d in df["date"]] == ["2022-06-12", "2022-06-17", "2022-06-22"]
+    out = availability_by_year(df, usable_cloud_pct=40)
+    assert out.loc[0, "year"] == 2022 and out.loc[0, "n_usable_dates"] == 2
