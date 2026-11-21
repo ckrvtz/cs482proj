@@ -221,24 +221,24 @@
         "role": "improving_control",
         "expected_dynamic": "Afforestation / re-greening",
         "centre_wgs84": [
-          108.5,
-          40.2
+          109.15,
+          40.19
         ],
         "utm_epsg": 32649,
         "bbox_utm": [
-          277200.0,
-          4443000.0,
-          297200.0,
-          4463000.0
+          332500.0,
+          4440500.0,
+          352500.0,
+          4460500.0
         ],
         "bbox_wgs84": [
-          108.378982,
-          40.107821,
-          108.620366,
-          40.292912
+          109.02976,
+          40.098137,
+          109.269489,
+          40.281987
         ],
-        "notes": null,
-        "aridity_index": 0.236,
+        "notes": "Moved from (40.2, 108.5) (2026-11-21, project owner) to visible re-greening inside the Kubuqi Desert Closed Reserve, Dalat County (109\u00b000'-110\u00b045' E, 40\u00b000'-40\u00b030' N), site of shrub sand-fixation plantations (Guo et al. 2025, Front. Plant Sci. 16:1688154, section 2.1).",
+        "aridity_index": 0.322,
         "aridity_class": "dryland",
         "aridity_source": "CHIRPS v3 / Hobbins ETo, 1991-2020",
         "wet_season_months": [
@@ -253,31 +253,31 @@
           1,
           2
         ],
-        "min_usable_dates_per_year": 39
+        "min_usable_dates_per_year": 73
       },
       "geometry": {
         "type": "Polygon",
         "coordinates": [
           [
             [
-              108.385909,
-              40.107821
+              109.034966,
+              40.098137
             ],
             [
-              108.620366,
-              40.112879
+              109.269489,
+              40.101879
             ],
             [
-              108.614059,
-              40.292912
+              109.264904,
+              40.281987
             ],
             [
-              108.378982,
-              40.287823
+              109.02976,
+              40.278221
             ],
             [
-              108.385909,
-              40.107821
+              109.034966,
+              40.098137
             ]
           ]
         ]
@@ -291,24 +291,24 @@
         "role": "degrading",
         "expected_dynamic": "Lake shrinkage, salt flats, agricultural pressure",
         "centre_wgs84": [
-          45.3,
+          45.19,
           37.7
         ],
         "utm_epsg": 32638,
         "bbox_utm": [
-          516400.0,
-          4162600.0,
-          536400.0,
-          4182600.0
+          506700.0,
+          4162500.0,
+          526700.0,
+          4182500.0
         ],
         "bbox_wgs84": [
-          45.185815,
-          37.609774,
-          45.413414,
-          37.790614
+          45.075911,
+          37.609205,
+          45.303244,
+          37.789836
         ],
-        "notes": "Centre is on the lake itself; may need moving to the shore/farmland after the imagery check.",
-        "aridity_index": 0.192,
+        "notes": "Moved west from 45.3 (2026-11-21, project owner) so the square covers shore and farmland, not mostly lake (M1-T02 true-colour check).",
+        "aridity_index": 0.211,
         "aridity_class": "dryland",
         "aridity_source": "CHIRPS v3 / Hobbins ETo, 1991-2020",
         "wet_season_months": [
@@ -323,31 +323,31 @@
           8,
           9
         ],
-        "min_usable_dates_per_year": 89
+        "min_usable_dates_per_year": 100
       },
       "geometry": {
         "type": "Polygon",
         "coordinates": [
           [
             [
-              45.185815,
-              37.610348
+              45.075911,
+              37.609569
             ],
             [
-              45.412415,
-              37.609774
+              45.302511,
+              37.609205
             ],
             [
-              45.413414,
-              37.790036
+              45.303244,
+              37.78947
             ],
             [
-              45.186265,
-              37.790614
+              45.076095,
+              37.789836
             ],
             [
-              45.185815,
-              37.610348
+              45.075911,
+              37.609569
             ]
           ]
         ]

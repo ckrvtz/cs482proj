@@ -2,3 +2,4 @@ date,task_id,api,budget_category,request_count,pu_before,pu_after,requests_befor
 2026-11-20,P0-T03,balance,setup_pilot,0,30000,30000,30000,30000,Starting balance on the CDSE account
 2026-11-20,P0-T03,catalog,setup_pilot,2,30000,30000,30000,29999,Connectivity check: Catalog search ferlo_test 2023-01-01..2023-01-31
 2026-11-20,M1-T02,catalog+process,setup_pilot,13,30000,29982,29999,29891,"AOI selection: 0 Catalog page(s), 12 true-colour image(s)"
+2026-11-21,M1-T02,catalog+process,setup_pilot,43,29982,29976,29891,29849,"AOI selection: 38 Catalog page(s), 4 true-colour image(s)"
