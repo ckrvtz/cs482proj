@@ -114,15 +114,30 @@ Recomputed with the measured factor, for 16-bit designs only:
 | Design | AOI square | Acquisitions | Projected PU | × extraction budget |
 |------|------|----------------|------|------|
 | b10 | 20 km | all | 47 395 | 2.37 |
-| b10 | 20 km | low-cloud only (unmeasured) | 32 367 | 1.62 |
+| b10 | 20 km | low-cloud only (measured) | 42 111 | 2.11 |
 | b10 | 10 km | all | 11 849 | 0.59 |
-| b10 | 10 km | low-cloud only (unmeasured) | 8 092 | 0.40 |
+| b10 | 10 km | low-cloud only (measured) | 10 528 | 0.53 |
 | c6 | 20 km | all | 30 160 | 1.51 |
-| c6 | 20 km | low-cloud only (unmeasured) | 20 597 | 1.03 |
+| c6 | 20 km | low-cloud only (measured) | 26 798 | 1.34 |
 | c6 | 10 km | all | 7 540 | 0.38 |
-| c6 | 10 km | low-cloud only (unmeasured) | 5 149 | 0.26 |
+| c6 | 10 km | low-cloud only (measured) | 6 700 | 0.33 |
 
-The full plan (20 km squares, every acquisition) does not fit the 20 000 PU extraction budget with either band set; smaller squares or fewer acquisitions per composite do. Sources: `reports/results/m1_pilot_cost.csv`, `m1_pilot_qa.csv`, `m1_harmonisation.csv`, `m1_pu_projection_calibrated.csv`.
+The full plan (20 km squares, every acquisition) does not fit the 20 000 PU extraction budget with either band set; 10 km squares do. A follow-up request tested passing only low-cloud acquisitions (tile cloud cover of at most 40 %): it cost 17.8 instead of 27.3 PU (ratio 0.65), while the median number of valid observations per pixel only fell from 33 to 31 and band medians changed by at most a few thousandths of reflectance (`m1_lowcloud_band_diff.csv`). Because most AOIs are rarely cloudy, the saving is concentrated at the Aral Sea and Kubuqi; the low-cloud rows above apply the measured effect per AOI.
+
+Adding the monthly index series (16-bit, 10 km squares; at 20 m or at 100 m, i.e. one pixel per cell) gives these whole-plan totals:
+
+| Seasonal design | Monthly series | Acquisitions | Seasonal PU | Monthly PU | Total PU | × budget |
+|------|------|----------------|------|------|------|------|
+| c6 | 100 m | low-cloud only (measured) | 6 700 | 347 | 7 047 | 0.35 |
+| c6 | 100 m | all | 7 540 | 392 | 7 932 | 0.40 |
+| b10 | 100 m | low-cloud only (measured) | 10 528 | 347 | 10 875 | 0.54 |
+| b10 | 100 m | all | 11 849 | 392 | 12 241 | 0.61 |
+| c6 | 20 m | low-cloud only (measured) | 6 700 | 8 675 | 15 375 | 0.77 |
+| c6 | 20 m | all | 7 540 | 9 808 | 17 348 | 0.87 |
+| b10 | 20 m | low-cloud only (measured) | 10 528 | 8 675 | 19 203 | 0.96 |
+| b10 | 20 m | all | 11 849 | 9 808 | 21 657 | 1.08 |
+
+Sources: `reports/results/m1_pilot_cost.csv`, `m1_pilot_qa.csv`, `m1_harmonisation.csv`, `m1_lowcloud_test.csv`, `m1_pu_projection_calibrated.csv`, `m1_pu_projection_monthly.csv`, `m1_pu_plan_options.csv`.
 
 ## 6. Implications for the rest of the project
 
