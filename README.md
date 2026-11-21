@@ -101,6 +101,31 @@ docs/              roadmap, milestone requirements, references
 Paths, years, AOIs and thresholds are read from `config/` via `desertification.config`;
 don't hard-code them.
 
+## Moving the data cache between machines
+
+Downloads are cached in `data/raw/` and `data/interim/`, which git ignores. To reuse them
+on another machine instead of downloading again:
+
+```bash
+python scripts/pack_data.py
+```
+
+This writes `data-cache.zip` in the repository root (also gitignored, never pushed),
+with a manifest of every file's SHA-256. Copy it to the other machine's repository root
+by any means, then:
+
+```bash
+python scripts/unpack_data.py --dry-run
+```
+
+```bash
+python scripts/unpack_data.py
+```
+
+Files already present with the same content are skipped. Files that differ locally are
+left alone and listed, unless you add `--overwrite`. Use `--force` with `pack_data.py`
+to replace an existing archive.
+
 ## Data and attribution
 
 Raw imagery is downloaded once and cached under `data/raw/` on the local machine,

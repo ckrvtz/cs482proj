@@ -235,3 +235,7 @@ wandb/
 mlruns/
 # Sentinel Hub local config, if created by sentinelhub-py tooling
 sh_config.toml
+# Local data-cache archive for moving data between machines (scripts/pack_data.py)
+/data-cache*.zip
+/data-cache*.zip.tmp
+*.unpack-tmp

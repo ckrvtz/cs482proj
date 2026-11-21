@@ -35,6 +35,8 @@ jupyter nbconvert --to notebook --execute --inplace notebooks/<nb>.ipynb   # run
 scripts/build_pdf.sh reports/milestone1/milestone1_report.md               # Markdown report → PDF (pandoc)
 python scripts/check_env.py [--require-gpu]                               # verify imports, versions, GPU
 python scripts/check_secrets.py                                           # fail if a .env value is in any file git would commit
+python scripts/pack_data.py [--force]                                     # zip data/raw + data/interim into data-cache.zip (gitignored)
+python scripts/unpack_data.py [--dry-run] [--overwrite]                    # restore data-cache.zip into the cache folders
 ```
 
 ## Compute and storage

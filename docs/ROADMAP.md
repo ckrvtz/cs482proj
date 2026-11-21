@@ -403,7 +403,9 @@ cs482proj/
 ├── scripts/
 │   ├── build_pdf.sh              # Markdown report → PDF (pandoc)
 │   ├── check_env.py              # verify imports, versions, GPU
-│   └── check_secrets.py          # fail if a .env value appears in a file git would commit
+│   ├── check_secrets.py          # fail if a .env value appears in a file git would commit
+│   ├── pack_data.py              # zip the local data cache into data-cache.zip (gitignored)
+│   └── unpack_data.py            # restore data-cache.zip into data/raw, data/interim
 ├── tests/                        # pytest unit tests (indices, trends, splits, labels)
 └── docs/
     ├── ROADMAP.md  Milestone1-3.md

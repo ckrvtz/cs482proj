@@ -82,6 +82,7 @@ paths:
   aois: config/aois.geojson
   data_raw: data/raw
   data_interim: data/interim
+  data_archive: data-cache.zip      # local cache archive (gitignored; scripts/pack_data.py)
   data_processed: data/processed
   data_sample: data/sample
   data_labels: data/labels
@@ -93,3 +94,7 @@ paths:
   figures: reports/figures
   results: reports/results
   evalscripts: src/desertification/evalscripts
+
+# Moving the local cache between machines (scripts/pack_data.py, scripts/unpack_data.py).
+data_cache:
+  dirs: [data/raw, data/interim]
