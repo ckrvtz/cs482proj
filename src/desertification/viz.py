@@ -575,3 +575,104 @@ def plot_window_preview(
     fig.tight_layout(rect=(0, 0.03, 1, 0.96))
     _save(fig, out_path, dpi=150)
     return fig
+
+
+def plot_aux_overlay(
+    panels: list[dict[str, Any]],
+    suptitle: str,
+    caption: str,
+    out_path: Path | None = None,
+    ncols: int = 3,
+) -> Any:
+    """Registration check: auxiliary layers drawn over a Sentinel-2 (or hillshade) background.
+
+    Each panel is a dict with
+
+    * ``title`` (str), ``view`` ([xmin, ymin, xmax, ymax] UTM metres shown);
+    * ``background`` ((H, W, 3) float 0-1 true colour, or (H, W) hillshade 0-1) and
+      ``background_extent`` (UTM bounds of that array);
+    * ``wc_edges`` (bool (h, w) WorldCover class-boundary mask) and ``wc_extent``;
+    * ``dem`` ((H, W) elevation in m) and ``dem_extent`` for contour lines;
+    * ``chirps_lines`` (list of (n, 2) UTM polylines: CHIRPS 0.05° pixel borders);
+    * optional ``pixel_grid`` (float, metres): draw the S2 pixel grid at this spacing.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+    """
+    import textwrap
+
+    import matplotlib.pyplot as plt
+    from matplotlib.lines import Line2D
+    from matplotlib.patches import Patch
+
+    apply_style()
+    nrows = int(np.ceil(len(panels) / ncols))
+    fig, axes = plt.subplots(nrows, ncols, figsize=(3.8 * ncols, 3.9 * nrows), squeeze=False)
+    for ax, p in zip(axes.flat, panels, strict=False):
+        xmin, ymin, xmax, ymax = p["view"]
+        bg = p.get("background")
+        if bg is not None:
+            x0, y0, x1, y1 = p["background_extent"]
+            kw = {"cmap": "gray", "vmin": 0, "vmax": 1} if bg.ndim == 2 else {}
+            ax.imshow(bg, extent=(x0, x1, y0, y1), interpolation="nearest", **kw)
+        edges = p.get("wc_edges")
+        if edges is not None:
+            x0, y0, x1, y1 = p["wc_extent"]
+            rgba = np.zeros((*edges.shape, 4))
+            rgba[edges] = (*_hex_rgb(SERIES_2), 1.0)
+            ax.imshow(rgba, extent=(x0, x1, y0, y1), interpolation="nearest")
+        dem = p.get("dem")
+        if dem is not None:
+            x0, y0, x1, y1 = p["dem_extent"]
+            h, w = dem.shape
+            xs = np.linspace(x0, x1, w, endpoint=False) + (x1 - x0) / w / 2
+            ys = np.linspace(y1, y0, h, endpoint=False) - (y1 - y0) / h / 2
+            ax.contour(xs, ys, dem, levels=8, colors=SERIES_1, linewidths=0.7)
+        for line in p.get("chirps_lines", []):
+            ax.plot(line[:, 0], line[:, 1], color=SURFACE, linewidth=1.8)
+            ax.plot(line[:, 0], line[:, 1], color=INK, linewidth=0.8, linestyle="--")
+        step = p.get("pixel_grid")
+        if step:
+            for x in np.arange(xmin, xmax + step / 2, step):
+                ax.axvline(x, color=SURFACE, linewidth=0.3, alpha=0.6)
+            for y in np.arange(ymin, ymax + step / 2, step):
+                ax.axhline(y, color=SURFACE, linewidth=0.3, alpha=0.6)
+        ax.set_xlim(xmin, xmax)
+        ax.set_ylim(ymin, ymax)
+        ax.set_aspect("equal")
+        ax.grid(False)
+        ax.tick_params(labelsize=7)
+        ax.ticklabel_format(style="plain", useOffset=False)
+        ax.set_xlabel("UTM easting (m)", fontsize=7)
+        ax.set_ylabel("UTM northing (m)", fontsize=7)
+        ax.set_title(textwrap.fill(p["title"], 36), fontsize=9)
+    for ax in list(axes.flat)[len(panels) :]:
+        ax.set_visible(False)
+    handles = [
+        Patch(color=SERIES_2, label="WorldCover class boundary (10 m)"),
+        Line2D([], [], color=SERIES_1, linewidth=0.9, label="DEM contours (20 m grid)"),
+        Line2D([], [], color=INK, linewidth=0.9, linestyle="--", label="CHIRPS 0.05° pixels"),
+    ]
+    fig.legend(handles=handles, loc="lower right", ncol=3, fontsize=7)
+    fig.suptitle(suptitle, color=INK)
+    fig.text(0.01, 0.005, textwrap.fill(caption, 120), fontsize=7, color=INK_2, va="bottom")
+    fig.tight_layout(rect=(0, 0.05, 1, 0.96))
+    _save(fig, out_path, dpi=150)
+    return fig
+
+
+def _hex_rgb(colour: str) -> tuple[float, float, float]:
+    colour = colour.lstrip("#")
+    return tuple(int(colour[i : i + 2], 16) / 255 for i in (0, 2, 4))  # type: ignore[return-value]
+
+
+def stretch_true_colour(rgb: np.ndarray, low: float = 2, high: float = 98) -> np.ndarray:
+    """Percentile stretch of an (H, W, 3) reflectance image to 0-1 (NaN -> 0)."""
+    out = np.zeros(rgb.shape, dtype="float32")
+    finite = np.isfinite(rgb)
+    if not finite.any():
+        return out
+    lo, hi = np.nanpercentile(rgb, [low, high])
+    out[finite] = np.clip((rgb[finite] - lo) / max(hi - lo, 1e-6), 0, 1)
+    return out

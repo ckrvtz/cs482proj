@@ -1,4 +1,4 @@
-"""Auxiliary (non-Sentinel) data: monthly rainfall and reference evapotranspiration.
+"""Auxiliary (non-Sentinel) data: rainfall, evapotranspiration, DEM and land cover.
 
 Sources (open, no account, read straight from the Climate Hazards Center server):
 
@@ -8,6 +8,10 @@ Sources (open, no account, read straight from the Climate Hazards Center server)
 Only the pixels around each AOI are read (HTTP range requests through GDAL ``/vsicurl/``),
 so nothing large is downloaded. Results are cached as JSON with a provenance sidecar.
 URLs come from ``config/project.yaml`` (``climate_data``).
+
+M1-T07 adds per-AOI layers on the Sentinel-2 extraction grid: Copernicus DEM GLO-30
+(elevation, slope, aspect) and ESA WorldCover 2020/2021 from Microsoft Planetary Computer,
+and CHIRPS monthly grids kept at native 0.05° and sampled per 100 m cell.
 """
 
 from __future__ import annotations
@@ -16,7 +20,7 @@ import json
 import logging
 import math
 import time
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
@@ -25,10 +29,12 @@ import numpy as np
 import pandas as pd
 
 from desertification.cache import (
+    cached_file_valid,
     load_cached_json,
     request_hash,
     save_json_with_sidecar,
     sidecar_path,
+    write_sidecar,
 )
 
 logger = logging.getLogger(__name__)
@@ -517,3 +523,720 @@ def load_partial_arrays(path: Path) -> dict[tuple[int, int], tuple[np.ndarray, l
                 _, year, month = key.split("_")
                 out[(int(year), int(month))] = (npz[key], npz[f"e_{year}_{month}"].tolist())
     return out
+
+
+# =====================================================================================
+# Auxiliary layers on the Sentinel-2 extraction grid (M1-T07)
+# =====================================================================================
+
+#: ESA WorldCover class codes (Planetary Computer `esa-worldcover` collection metadata).
+WORLDCOVER_CLASSES = {
+    10: "tree_cover",
+    20: "shrubland",
+    30: "grassland",
+    40: "cropland",
+    50: "built_up",
+    60: "bare_sparse",
+    70: "snow_ice",
+    80: "water",
+    90: "herbaceous_wetland",
+    95: "mangroves",
+    100: "moss_lichen",
+}
+
+
+class AuxDownloadError(RuntimeError):
+    """Some auxiliary layers could not be downloaded; the others were cached."""
+
+
+def grid_transform(window_utm: Sequence[float], resolution_m: float) -> tuple[Any, int, int]:
+    """North-up geotransform, width and height of a grid covering a UTM window.
+
+    Parameters
+    ----------
+    window_utm : [xmin, ymin, xmax, ymax]
+        Window in metres; sides must be whole multiples of ``resolution_m``.
+    resolution_m : float
+        Pixel size in metres.
+
+    Returns
+    -------
+    (affine.Affine, int, int)
+        Transform, width, height. Matches the grid of a Sentinel Hub request for the same
+        bbox and resolution.
+    """
+    from affine import Affine
+
+    xmin, ymin, xmax, ymax = window_utm
+    width = (xmax - xmin) / resolution_m
+    height = (ymax - ymin) / resolution_m
+    if width != int(width) or height != int(height):
+        raise ValueError("window is not a whole number of pixels")
+    return Affine(resolution_m, 0, xmin, 0, -resolution_m, ymax), int(width), int(height)
+
+
+def grids_nested(
+    fine: Any, fine_shape: tuple[int, int], coarse: Any, coarse_shape: tuple[int, int], factor: int
+) -> bool:
+    """True if a fine grid subdivides a coarse grid exactly (``factor`` x ``factor`` per pixel).
+
+    ``factor = 1`` tests identical grids. Shapes are ``(height, width)``.
+    """
+    return (
+        abs(fine.c - coarse.c) < 1e-6
+        and abs(fine.f - coarse.f) < 1e-6
+        and abs(fine.a * factor - coarse.a) < 1e-9
+        and abs(fine.e * factor - coarse.e) < 1e-9
+        and fine.b == coarse.b == 0
+        and fine.d == coarse.d == 0
+        and fine_shape == (coarse_shape[0] * factor, coarse_shape[1] * factor)
+    )
+
+
+def slope_aspect(dem: np.ndarray, resolution_m: float) -> tuple[np.ndarray, np.ndarray]:
+    """Slope and aspect from a north-up DEM (Horn's 3 x 3 method, edges replicated).
+
+    Parameters
+    ----------
+    dem : numpy.ndarray, shape (H, W)
+        Elevation in metres; rows run north to south.
+    resolution_m : float
+        Pixel size in metres.
+
+    Returns
+    -------
+    slope_deg : numpy.ndarray
+        Slope in degrees (0 = flat).
+    aspect_deg : numpy.ndarray
+        Downslope direction in degrees clockwise from north (0 = N, 90 = E); NaN where flat.
+    """
+    z = np.pad(np.asarray(dem, dtype="float64"), 1, mode="edge")
+    a, b, c = z[:-2, :-2], z[:-2, 1:-1], z[:-2, 2:]
+    d, f = z[1:-1, :-2], z[1:-1, 2:]
+    g, h, i = z[2:, :-2], z[2:, 1:-1], z[2:, 2:]
+    dz_east = ((c + 2 * f + i) - (a + 2 * d + g)) / (8 * resolution_m)
+    dz_south = ((g + 2 * h + i) - (a + 2 * b + c)) / (8 * resolution_m)
+    dz_north = -dz_south
+    slope = np.degrees(np.arctan(np.hypot(dz_east, dz_north)))
+    aspect = np.degrees(np.arctan2(-dz_east, -dz_north)) % 360
+    aspect = np.where((dz_east == 0) & (dz_north == 0), np.nan, aspect)
+    return slope.astype("float32"), aspect.astype("float32")
+
+
+def block_mode(arr: np.ndarray, factor: int, nodata: int = 0) -> np.ndarray:
+    """Most frequent value in each ``factor`` x ``factor`` block (ties: smallest code).
+
+    ``nodata`` is ignored unless a block has nothing else.
+    """
+    h, w = arr.shape
+    if h % factor or w % factor:
+        raise ValueError("array shape must be divisible by factor")
+    blocks = arr.reshape(h // factor, factor, w // factor, factor).transpose(0, 2, 1, 3)
+    blocks = blocks.reshape(h // factor, w // factor, factor * factor)
+    out = np.full((h // factor, w // factor), nodata, dtype=arr.dtype)
+    best = np.zeros(out.shape, dtype=int)
+    for value in np.unique(arr):
+        if value == nodata:
+            continue
+        count = (blocks == value).sum(axis=2)
+        better = count > best
+        out[better] = value
+        best[better] = count[better]
+    return out
+
+
+def block_class_fractions(
+    arr: np.ndarray, factor: int, classes: Sequence[int]
+) -> dict[int, np.ndarray]:
+    """Fraction of each class in ``factor`` x ``factor`` blocks (e.g. 10 m pixels per 100 m cell).
+
+    Returns ``{class: (H/f, W/f) float32 array}``; fractions are of all pixels in the block.
+    """
+    h, w = arr.shape
+    if h % factor or w % factor:
+        raise ValueError("array shape must be divisible by factor")
+    blocks = arr.reshape(h // factor, factor, w // factor, factor)
+    n = factor * factor
+    return {c: (blocks == c).sum(axis=(1, 3)).astype("float32") / n for c in classes}
+
+
+def cell_centres(window_utm: Sequence[float], cell_m: float) -> tuple[np.ndarray, np.ndarray]:
+    """UTM x and y of every cell centre, as (rows, cols) arrays (row 0 = north)."""
+    xmin, ymin, xmax, ymax = window_utm
+    xs = np.arange(xmin + cell_m / 2, xmax, cell_m)
+    ys = np.arange(ymax - cell_m / 2, ymin, -cell_m)
+    return np.meshgrid(xs, ys)
+
+
+def sample_nearest(arr: np.ndarray, transform: Any, xs: np.ndarray, ys: np.ndarray) -> np.ndarray:
+    """Value of the pixel containing each point (NaN outside the raster).
+
+    Parameters
+    ----------
+    arr : numpy.ndarray, shape (..., H, W)
+        Raster; leading dimensions (e.g. months) are kept.
+    transform : affine.Affine
+        Raster geotransform, same CRS as the points.
+    xs, ys : numpy.ndarray
+        Point coordinates.
+    """
+    inv = ~transform
+    x = np.asarray(xs, dtype=float)
+    y = np.asarray(ys, dtype=float)
+    cols = inv.a * x + inv.b * y + inv.c
+    rows = inv.d * x + inv.e * y + inv.f
+    rows = np.floor(rows).astype(int)
+    cols = np.floor(cols).astype(int)
+    h, w = arr.shape[-2:]
+    inside = (rows >= 0) & (rows < h) & (cols >= 0) & (cols < w)
+    out = np.full(arr.shape[:-2] + rows.shape, np.nan, dtype="float32")
+    out[..., inside] = arr[..., rows[inside], cols[inside]]
+    return out
+
+
+def window_bounds_wgs84(
+    window_utm: Sequence[float], epsg: int, pad_deg: float = 0.0
+) -> list[float]:
+    """WGS84 bounding box of a UTM window (all four corners), padded by ``pad_deg``."""
+    from pyproj import Transformer
+
+    xmin, ymin, xmax, ymax = window_utm
+    tr = Transformer.from_crs(epsg, 4326, always_xy=True)
+    lons, lats = tr.transform([xmin, xmax, xmax, xmin], [ymin, ymin, ymax, ymax])
+    return [min(lons) - pad_deg, min(lats) - pad_deg, max(lons) + pad_deg, max(lats) + pad_deg]
+
+
+# --- downloads: Planetary Computer (DEM, WorldCover) -------------------------------------
+
+PC_STAC_URL = "https://planetarycomputer.microsoft.com/api/stac/v1"
+
+
+def pc_items(collection: str, bbox_wgs84: Sequence[float], query: dict | None = None) -> list[Any]:
+    """Signed STAC items of a Planetary Computer collection intersecting a bbox."""
+    import planetary_computer
+    import pystac_client
+
+    catalog = pystac_client.Client.open(PC_STAC_URL, modifier=planetary_computer.sign_inplace)
+    return list(
+        catalog.search(collections=[collection], bbox=list(bbox_wgs84), query=query).items()
+    )
+
+
+def warp_to_grid(
+    hrefs: Sequence[str],
+    bounds_wgs84: Sequence[float],
+    dst_transform: Any,
+    dst_shape: tuple[int, int],
+    dst_epsg: int,
+    resampling: str,
+    dst_dtype: str,
+    src_nodata: float | None = None,
+) -> np.ndarray:
+    """Mosaic the needed part of remote rasters and warp it onto a target UTM grid.
+
+    Only the windows covering ``bounds_wgs84`` are read (COGs over HTTP).
+    """
+    import rasterio
+    from rasterio.enums import Resampling
+    from rasterio.merge import merge
+    from rasterio.warp import reproject
+
+    with rasterio.Env(**GDAL_REMOTE_ENV):
+        sources = [rasterio.open(h) for h in hrefs]
+        try:
+            mosaic, src_transform = merge(sources, bounds=tuple(bounds_wgs84), nodata=src_nodata)
+            src_crs = sources[0].crs
+        finally:
+            for s in sources:
+                s.close()
+    out = np.zeros(dst_shape, dtype=dst_dtype)
+    reproject(
+        source=mosaic[0],
+        destination=out,
+        src_transform=src_transform,
+        src_crs=src_crs,
+        src_nodata=src_nodata,
+        dst_transform=dst_transform,
+        dst_crs=f"EPSG:{dst_epsg}",
+        resampling=getattr(Resampling, resampling),
+    )
+    return out
+
+
+def _write_tif(
+    path: Path,
+    bands: list[np.ndarray],
+    names: list[str],
+    transform: Any,
+    epsg: int,
+    nodata: float | None = None,
+) -> None:
+    import rasterio
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    h, w = bands[0].shape
+    with rasterio.open(
+        path,
+        "w",
+        driver="GTiff",
+        width=w,
+        height=h,
+        count=len(bands),
+        dtype=bands[0].dtype,
+        crs=f"EPSG:{epsg}",
+        transform=transform,
+        compress="deflate",
+        nodata=nodata,
+    ) as dst:
+        for i, (band, name) in enumerate(zip(bands, names, strict=True), start=1):
+            dst.write(band, i)
+            dst.set_band_description(i, name)
+
+
+def _aux_entry(
+    cfg: dict[str, Any], dataset: str, aoi_id: str, stem: str, params: dict[str, Any]
+) -> Path:
+    from desertification.config import get_path
+
+    return get_path(cfg, "aux_cache") / dataset / aoi_id / f"{stem}_{request_hash(params)[:10]}.tif"
+
+
+def dem_layers(
+    cfg: dict[str, Any],
+    aoi_id: str,
+    window_utm: Sequence[float],
+    epsg: int,
+    resolution_m: float,
+    allow_download: bool = False,
+    fetch_fn: Callable[..., np.ndarray] | None = None,
+) -> Path | None:
+    """Copernicus DEM GLO-30 on the extraction grid: elevation (m), slope and aspect (degrees).
+
+    Elevation is bilinearly resampled from the ~30 m DEM onto the exact Sentinel-2 grid of the
+    window; slope and aspect are derived at that resolution (:func:`slope_aspect`). The DEM is
+    read one pixel wider on every side and cropped after the 3 x 3 derivatives, so border
+    pixels get true slopes instead of edge-replicated ones.
+
+    ``fetch_fn()`` (injectable for tests) must return elevation in metres on that padded
+    grid, shape ``(H + 2, W + 2)``.
+
+    Returns
+    -------
+    Path or None
+        Cached 3-band float32 GeoTIFF (``elevation_m``, ``slope_deg``, ``aspect_deg``), or
+        None if not cached and downloads are not allowed.
+    """
+    transform, width, height = grid_transform(window_utm, resolution_m)
+    params = {
+        "dataset": "cop-dem-glo-30",
+        "source": "planetary-computer",
+        "window_utm": list(map(float, window_utm)),
+        "epsg": int(epsg),
+        "resolution_m": float(resolution_m),
+        "resampling": "bilinear",
+        "derived": "slope/aspect Horn 3x3, 1-pixel padded read",
+    }
+    path = _aux_entry(cfg, "dem", aoi_id, f"dem_{int(resolution_m)}m", params)
+    if cached_file_valid(path, params):
+        return path
+    if not allow_download:
+        return None
+    xmin, ymin, xmax, ymax = window_utm
+    r = resolution_m
+    padded = [xmin - r, ymin - r, xmax + r, ymax + r]
+    pad_transform, _, _ = grid_transform(padded, r)
+    bounds = window_bounds_wgs84(padded, epsg, pad_deg=0.01)
+    if fetch_fn is None:
+
+        def fetch_fn() -> np.ndarray:
+            items = pc_items("cop-dem-glo-30", bounds)
+            if not items:
+                raise AuxDownloadError(f"no DEM tiles found for {aoi_id}")
+            hrefs = [it.assets["data"].href for it in items]
+            return warp_to_grid(
+                hrefs, bounds, pad_transform, (height + 2, width + 2), epsg, "bilinear", "float32"
+            )
+
+    padded_dem = np.asarray(fetch_fn(), dtype="float32")
+    if padded_dem.shape != (height + 2, width + 2):
+        raise ValueError(f"DEM fetch returned {padded_dem.shape}, expected padded grid")
+    slope, aspect = (a[1:-1, 1:-1] for a in slope_aspect(padded_dem, r))
+    elevation = padded_dem[1:-1, 1:-1]
+    _write_tif(
+        path,
+        [elevation, slope, aspect],
+        ["elevation_m", "slope_deg", "aspect_deg"],
+        transform,
+        epsg,
+    )
+    write_sidecar(
+        path,
+        params,
+        extra={
+            "band_names": ["elevation_m", "slope_deg", "aspect_deg"],
+            "attribution": "produced using Copernicus WorldDEM-30",
+        },
+    )
+    return path
+
+
+def worldcover_layer(
+    cfg: dict[str, Any],
+    aoi_id: str,
+    window_utm: Sequence[float],
+    epsg: int,
+    year: int,
+    resolution_m: float = 10.0,
+    allow_download: bool = False,
+    fetch_fn: Callable[..., np.ndarray] | None = None,
+) -> Path | None:
+    """ESA WorldCover map for one year on a UTM grid nested in the extraction grid.
+
+    Nearest-neighbour onto a 10 m grid with the same origin as the Sentinel-2 20 m grid, so
+    each 20 m pixel holds exactly 2 x 2 WorldCover pixels and each 100 m cell 10 x 10
+    (class fractions per cell are computed later with :func:`block_class_fractions`).
+
+    Returns
+    -------
+    Path or None
+        Cached uint8 GeoTIFF (class codes, 0 = no data), or None if not cached and downloads
+        are not allowed.
+    """
+    transform, width, height = grid_transform(window_utm, resolution_m)
+    params = {
+        "dataset": "esa-worldcover",
+        "source": "planetary-computer",
+        "year": int(year),
+        "window_utm": list(map(float, window_utm)),
+        "epsg": int(epsg),
+        "resolution_m": float(resolution_m),
+        "resampling": "nearest",
+    }
+    path = _aux_entry(cfg, "worldcover", aoi_id, f"worldcover_{year}_{int(resolution_m)}m", params)
+    if cached_file_valid(path, params):
+        return path
+    if not allow_download:
+        return None
+    bounds = window_bounds_wgs84(window_utm, epsg, pad_deg=0.005)
+    if fetch_fn is None:
+
+        def fetch_fn() -> np.ndarray:
+            items = [
+                it
+                for it in pc_items("esa-worldcover", bounds)
+                if str(it.properties.get("start_datetime", it.properties.get("datetime", "")))[:4]
+                == str(year)
+            ]
+            if not items:
+                raise AuxDownloadError(f"no WorldCover {year} tiles found for {aoi_id}")
+            hrefs = [it.assets["map"].href for it in items]
+            return warp_to_grid(
+                hrefs, bounds, transform, (height, width), epsg, "nearest", "uint8", src_nodata=0
+            )
+
+    classes = np.asarray(fetch_fn(), dtype="uint8")
+    _write_tif(path, [classes], [f"worldcover_{year}"], transform, epsg, nodata=0)
+    write_sidecar(
+        path,
+        params,
+        extra={"classes": WORLDCOVER_CLASSES, "version": "v100" if year == 2020 else "v200"},
+    )
+    return path
+
+
+def fetch_aux_per_aoi(
+    aoi_ids: Sequence[str],
+    fetch_one: Callable[[str], Path | None],
+    max_workers: int,
+    retry_rounds: int,
+    backoff_s: float,
+) -> dict[str, Path]:
+    """Run one auxiliary download per AOI with retries; raise if any AOI still fails.
+
+    Successful AOIs are cached by ``fetch_one`` and are not downloaded again next time.
+    """
+
+    def fetch(aoi_id: str) -> Path | None:
+        try:
+            return fetch_one(aoi_id)
+        except Exception as exc:  # noqa: BLE001 - retried below, then reported
+            logger.warning("Auxiliary download failed for %s: %s", aoi_id, exc)
+            return None
+
+    done, failed = fetch_with_retries(list(aoi_ids), fetch, max_workers, retry_rounds, backoff_s)
+    if failed:
+        raise AuxDownloadError(
+            f"{len(failed)} AOI(s) failed: {', '.join(failed)}; the other {len(done)} are cached. "
+            "Run again later to fetch only the missing ones."
+        )
+    return done
+
+
+# --- downloads: CHIRPS monthly grids ---------------------------------------------------
+
+
+def read_window_array(
+    url: str, bounds: Sequence[float], nodata_below: float
+) -> tuple[np.ndarray, Any]:
+    """Pixels of a remote 4326 raster covering ``bounds`` (all touched) and their transform."""
+    import rasterio
+    from rasterio.windows import Window
+    from rasterio.windows import transform as window_transform
+
+    with rasterio.Env(**GDAL_REMOTE_ENV), rasterio.open(f"/vsicurl/{url}") as ds:
+        win = window_for_bounds(ds.transform, bounds, ds.width, ds.height)
+        if win is None:
+            raise ValueError("bounds outside the raster")
+        r0, r1, c0, c1 = win
+        w = Window(c0, r0, c1 - c0, r1 - r0)
+        data = ds.read(1, window=w).astype("float32")
+        tr = window_transform(w, ds.transform)
+    return np.where(data >= nodata_below, data, np.nan).astype("float32"), tr
+
+
+def climate_monthly_grids(
+    cfg: dict[str, Any],
+    source: str,
+    bounds_by_aoi: dict[str, list[float]],
+    first_year: int,
+    last_year: int,
+    allow_download: bool = False,
+    reader: Callable[[str, Sequence[float], float], tuple[np.ndarray, Any]] | None = None,
+) -> dict[str, Path] | None:
+    """Monthly climate grids (mm/month, native 0.05°) around each AOI window.
+
+    ``source`` is ``"chirps"`` (CHIRPS v3 rainfall) or ``"eto"`` (Hobbins reference ET); the
+    URL template is ``climate_data.<source>_monthly_url``. One multi-band GeoTIFF per AOI
+    in EPSG:4326 (band ``YYYY-MM``), to be sampled per cell with :func:`sample_nearest`
+    at :func:`cell_centres_lonlat`. Cached per AOI; downloads of missing AOIs resume from a
+    partial file and are cached only when every month succeeded.
+
+    Returns
+    -------
+    dict or None
+        ``aoi_id -> Path``, or None if something is missing and downloads are not allowed.
+    """
+    from desertification.config import get_path
+
+    climate = cfg["climate_data"]
+    template, nodata_below = climate[f"{source}_monthly_url"], climate["nodata_below"]
+    months = month_list(first_year, last_year)
+    names = [f"{y}-{m:02d}" for y, m in months]
+    entries = {}
+    for aoi_id, bounds in sorted(bounds_by_aoi.items()):
+        params = {
+            "dataset": f"{source}-monthly",
+            "url_template": template,
+            "bounds_wgs84": list(map(float, bounds)),
+            "years": [first_year, last_year],
+            "nodata_below": nodata_below,
+        }
+        path = (
+            get_path(cfg, "aux_cache")
+            / source
+            / aoi_id
+            / (f"monthly_grid_{first_year}_{last_year}_{request_hash(params)[:10]}.tif")
+        )
+        entries[aoi_id] = (path, params)
+    done = {k: p for k, (p, prm) in entries.items() if cached_file_valid(p, prm)}
+    missing = {k: bounds_by_aoi[k] for k in entries if k not in done}
+    if not missing:
+        return done
+    if not allow_download:
+        return None
+
+    reader = reader or read_window_array
+    group = {
+        "dataset": f"{source}-monthly",
+        "url_template": template,
+        "years": [first_year, last_year],
+        "bounds": {k: list(map(float, v)) for k, v in sorted(missing.items())},
+    }
+    partial_path = (
+        get_path(cfg, "aux_cache") / source / f"grids.partial-{request_hash(group)[:10]}.json"
+    )
+    partial = load_cached_json(partial_path, group) or {}
+    got = {tuple(map(int, k.split("-"))): v for k, v in partial.items()}
+
+    def fetch(ym: tuple[int, int]) -> dict[str, Any] | None:
+        url = template.format(year=ym[0], month=ym[1])
+        try:
+            out = {}
+            for aoi_id, bounds in missing.items():
+                arr, tr = reader(url, bounds, nodata_below)
+                out[aoi_id] = {
+                    "data": np.where(np.isfinite(arr), arr, -1).tolist(),
+                    "transform": list(tr)[:6],
+                }
+            return out
+        except Exception as exc:  # noqa: BLE001 - retried, then reported
+            logger.warning("Could not read %s: %s", url, exc)
+            return None
+
+    todo = [ym for ym in months if ym not in got]
+    fetched, failed = fetch_with_retries(
+        todo,
+        fetch,
+        climate.get("max_workers", 2),
+        climate.get("retry_rounds", 3),
+        climate.get("retry_backoff_s", 20),
+    )
+    got.update(fetched)
+    if failed:
+        save_json_with_sidecar(
+            partial_path, {f"{y}-{m:02d}": v for (y, m), v in sorted(got.items())}, group
+        )
+        raise ClimateDownloadError(
+            f"{len(failed)} of {len(months)} {source} files could not be read; "
+            f"{len(got)} months are saved."
+            " Run again later and only the missing months will be fetched."
+        )
+    from affine import Affine
+
+    for aoi_id in missing:
+        path, params = entries[aoi_id]
+        bands = []
+        for ym in months:
+            arr = np.asarray(got[ym][aoi_id]["data"], dtype="float32")
+            bands.append(np.where(arr < 0, np.nan, arr).astype("float32"))
+        transform = Affine(*got[months[0]][aoi_id]["transform"])
+        _write_tif(path, bands, names, transform, 4326)
+        write_sidecar(path, params, extra={"units": "mm/month", "band_names": names})
+        done[aoi_id] = path
+    for leftover in (partial_path, sidecar_path(partial_path)):
+        leftover.unlink(missing_ok=True)
+    return done
+
+
+# --- per-cell sampling helpers ---------------------------------------------------------
+
+
+def read_tif(path: Path) -> tuple[np.ndarray, Any, int, list[str]]:
+    """All bands of a GeoTIFF as ``(bands, H, W)`` plus transform, EPSG and band names."""
+    import rasterio
+
+    with rasterio.open(path) as ds:
+        return ds.read(), ds.transform, ds.crs.to_epsg(), list(ds.descriptions)
+
+
+def cell_centres_lonlat(
+    window_utm: Sequence[float], epsg: int, cell_m: float
+) -> tuple[np.ndarray, np.ndarray]:
+    """Cell-centre longitudes and latitudes (degrees), shape (rows, cols), row 0 = north."""
+    from pyproj import Transformer
+
+    xs, ys = cell_centres(window_utm, cell_m)
+    lon, lat = Transformer.from_crs(epsg, 4326, always_xy=True).transform(xs, ys)
+    return np.asarray(lon), np.asarray(lat)
+
+
+def mean_annual_total(monthly: np.ndarray) -> np.ndarray:
+    """Mean annual total (mm/year) of a ``(12 * n_years, ...)`` monthly stack in mm/month.
+
+    Pixels with any missing month are NaN (no gap filling).
+    """
+    monthly = np.asarray(monthly, dtype="float64")
+    if monthly.shape[0] % 12:
+        raise ValueError("stack must hold whole years of months")
+    total = monthly.sum(axis=0)  # NaN propagates
+    return (total / (monthly.shape[0] / 12)).astype("float32")
+
+
+def aridity_grid(precip_monthly: np.ndarray, eto_monthly: np.ndarray) -> np.ndarray:
+    """Aridity index P / ETo per pixel from aligned monthly stacks (both mm/month).
+
+    NaN where either input has a missing month or ETo is not positive.
+    """
+    p = mean_annual_total(precip_monthly)
+    e = mean_annual_total(eto_monthly)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        return np.where(e > 0, p / e, np.nan).astype("float32")
+
+
+# --- registration-check helpers (M1-T07 overlay) -----------------------------------------
+
+
+def hillshade(
+    dem: np.ndarray, resolution_m: float, azimuth_deg: float = 315.0, altitude_deg: float = 45.0
+) -> np.ndarray:
+    """Analytical hillshade (0-1) of a north-up DEM in metres, lit from ``azimuth_deg``."""
+    slope, aspect = slope_aspect(dem, resolution_m)
+    s = np.radians(slope)
+    a = np.radians(np.nan_to_num(aspect, nan=0.0))
+    az, alt = np.radians(azimuth_deg), np.radians(altitude_deg)
+    shade = np.sin(alt) * np.cos(s) + np.cos(alt) * np.sin(s) * np.cos(az - a)
+    return np.clip(shade, 0, 1).astype("float32")
+
+
+def class_edges(arr: np.ndarray) -> np.ndarray:
+    """True on pixels whose right or lower neighbour has a different class (boundary mask)."""
+    edges = np.zeros(arr.shape, dtype=bool)
+    edges[:, :-1] |= arr[:, :-1] != arr[:, 1:]
+    edges[:-1, :] |= arr[:-1, :] != arr[1:, :]
+    return edges
+
+
+def find_composite(
+    data_raw: Path, aoi_id: str, window_utm: Sequence[float], label_prefix: str = "s10b"
+) -> Path | None:
+    """Latest cached seasonal composite of an AOI whose sidecar bbox equals ``window_utm``.
+
+    Local lookup only (no network). Returns None if no matching composite is cached.
+    """
+    want = [float(v) for v in window_utm]
+    found = []
+    for tif in sorted((Path(data_raw) / aoi_id).glob(f"*_{label_prefix}*.tif")):
+        meta_path = sidecar_path(tif)
+        if not meta_path.exists():
+            continue
+        req = json.loads(meta_path.read_text(encoding="utf-8")).get("request", {})
+        if [float(v) for v in req.get("bbox_utm", [])] == want:
+            found.append(tif)
+    return found[-1] if found else None  # names start with the season start date
+
+
+def grid_lines_projected(
+    transform: Any, shape: tuple[int, int], src_epsg: int, dst_epsg: int, n: int = 20
+) -> list[np.ndarray]:
+    """Pixel boundary lines of a raster grid, densified and reprojected (for overlay plots).
+
+    Returns a list of ``(n, 2)`` arrays of ``(x, y)`` in ``dst_epsg``.
+    """
+    from pyproj import Transformer
+
+    tr = Transformer.from_crs(src_epsg, dst_epsg, always_xy=True)
+    h, w = shape
+    t = np.linspace(0, 1, n)
+    lines = []
+    a, b, c, d, e, f = (
+        transform.a,
+        transform.b,
+        transform.c,
+        transform.d,
+        transform.e,
+        transform.f,
+    )
+
+    def project(cols: np.ndarray, rows: np.ndarray) -> np.ndarray:
+        return np.column_stack(tr.transform(a * cols + b * rows + c, d * cols + e * rows + f))
+
+    for col in range(w + 1):
+        lines.append(project(np.full(n, float(col)), t * h))
+    for row in range(h + 1):
+        lines.append(project(t * w, np.full(n, float(row))))
+    return lines
+
+
+def busiest_block(mask: np.ndarray, block_px: int) -> tuple[int, int]:
+    """Top-left (row, col) of the ``block_px`` square window with the most True pixels.
+
+    Used to choose where to zoom for a registration check (many class boundaries).
+    """
+    h, w = mask.shape
+    if block_px > min(h, w):
+        raise ValueError("block larger than the array")
+    integral = np.pad(np.cumsum(np.cumsum(mask.astype(np.int64), 0), 1), ((1, 0), (1, 0)))
+    b = block_px
+    sums = integral[b:, b:] - integral[:-b, b:] - integral[b:, :-b] + integral[:-b, :-b]
+    r, c = np.unravel_index(np.argmax(sums), sums.shape)
+    return int(r), int(c)

@@ -97,6 +97,18 @@ climate_data:
   retry_rounds: 3              # extra passes over files that failed
   retry_backoff_s: 20          # pause before retry round r is retry_backoff_s * 2**r seconds
 
+# Auxiliary layers on the extraction grid (M1-T07). Open data, no quota.
+# DEM and WorldCover: Microsoft Planetary Computer STAC (signed COG reads);
+# CHIRPS/ETo monthly grids: the climate_data URLs above, study period, native 0.05°.
+aux_data:
+  worldcover_years: [2020, 2021]  # the two published WorldCover maps (v100, v200)
+  worldcover_resolution_m: 10     # native; nested 2 x 2 in the 20 m S2 grid
+  climate_pad_deg: 0.05           # one CHIRPS pixel of margin around each window
+  max_workers: 2                  # AOIs fetched in parallel
+  retry_rounds: 2
+  retry_backoff_s: 10
+  zoom_m: 1500                    # side of the zoomed registration-check panels
+
 # CDSE quota and budget caps in processing units (ROADMAP §3.4).
 quota:
   pu_total: 30000

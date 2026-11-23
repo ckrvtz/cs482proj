@@ -386,7 +386,8 @@ cs482proj/
 │   ├── 01_data_discovery.ipynb
 │   ├── 01b_aoi_selection.ipynb      # M1-T02
 │   ├── 01c_feasibility.ipynb        # M1-T03
-│   ├── 02_ingestion.ipynb
+│   ├── 02_ingestion.ipynb           # M1-T05, M1-T06
+│   ├── 02b_aux_data.ipynb           # M1-T07
 │   ├── 03_cleaning_eda.ipynb
 │   ├── 04_feature_engineering.ipynb
 │   ├── 05_labeling.ipynb
