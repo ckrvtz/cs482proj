@@ -592,7 +592,8 @@ def plot_aux_overlay(
     * ``background`` ((H, W, 3) float 0-1 true colour, or (H, W) hillshade 0-1) and
       ``background_extent`` (UTM bounds of that array);
     * ``wc_edges`` (bool (h, w) WorldCover class-boundary mask) and ``wc_extent``;
-    * ``dem`` ((H, W) elevation in m) and ``dem_extent`` for contour lines;
+    * ``dem`` ((H, W) elevation in m) and ``dem_extent`` for contour lines
+      (:func:`contour_levels`: no contours where relief is below the DEM's noise);
     * ``chirps_lines`` (list of (n, 2) UTM polylines: CHIRPS 0.05° pixel borders);
     * optional ``pixel_grid`` (float, metres): draw the S2 pixel grid at this spacing.
 
@@ -605,6 +606,7 @@ def plot_aux_overlay(
     import matplotlib.pyplot as plt
     from matplotlib.lines import Line2D
     from matplotlib.patches import Patch
+    from matplotlib.ticker import MaxNLocator
 
     apply_style()
     nrows = int(np.ceil(len(panels) / ncols))
@@ -628,7 +630,9 @@ def plot_aux_overlay(
             h, w = dem.shape
             xs = np.linspace(x0, x1, w, endpoint=False) + (x1 - x0) / w / 2
             ys = np.linspace(y1, y0, h, endpoint=False) - (y1 - y0) / h / 2
-            ax.contour(xs, ys, dem, levels=8, colors=SERIES_1, linewidths=0.7)
+            levels = contour_levels(np.nanmin(dem), np.nanmax(dem))
+            if len(levels):
+                ax.contour(xs, ys, dem, levels=levels, colors=SERIES_1, linewidths=0.7)
         for line in p.get("chirps_lines", []):
             ax.plot(line[:, 0], line[:, 1], color=SURFACE, linewidth=1.8)
             ax.plot(line[:, 0], line[:, 1], color=INK, linewidth=0.8, linestyle="--")
@@ -643,6 +647,8 @@ def plot_aux_overlay(
         ax.set_aspect("equal")
         ax.grid(False)
         ax.tick_params(labelsize=7)
+        ax.xaxis.set_major_locator(MaxNLocator(4))
+        ax.yaxis.set_major_locator(MaxNLocator(4))
         ax.ticklabel_format(style="plain", useOffset=False)
         ax.set_xlabel("UTM easting (m)", fontsize=7)
         ax.set_ylabel("UTM northing (m)", fontsize=7)
@@ -651,7 +657,7 @@ def plot_aux_overlay(
         ax.set_visible(False)
     handles = [
         Patch(color=SERIES_2, label="WorldCover class boundary (10 m)"),
-        Line2D([], [], color=SERIES_1, linewidth=0.9, label="DEM contours (20 m grid)"),
+        Line2D([], [], color=SERIES_1, linewidth=0.9, label="DEM contours (≥ 5 m interval)"),
         Line2D([], [], color=INK, linewidth=0.9, linestyle="--", label="CHIRPS 0.05° pixels"),
     ]
     fig.legend(handles=handles, loc="lower right", ncol=3, fontsize=7)
@@ -676,3 +682,17 @@ def stretch_true_colour(rgb: np.ndarray, low: float = 2, high: float = 98) -> np
     lo, hi = np.nanpercentile(rgb, [low, high])
     out[finite] = np.clip((rgb[finite] - lo) / max(hi - lo, 1e-6), 0, 1)
     return out
+
+
+def contour_levels(zmin: float, zmax: float, n: int = 6, min_interval_m: float = 5.0) -> np.ndarray:
+    """Round contour levels (metres) with about ``n`` steps and at least ``min_interval_m``.
+
+    Keeps near-flat terrain (e.g. the Aral seabed, ~3 m relief) from showing DEM noise as
+    contours. Returns an empty array when the relief is under two intervals.
+    """
+    if not np.isfinite(zmin) or not np.isfinite(zmax) or zmax - zmin < 2 * min_interval_m:
+        return np.array([])
+    raw = max((zmax - zmin) / n, min_interval_m)
+    mag = 10 ** np.floor(np.log10(raw))
+    step = next(m * mag for m in (1, 2, 2.5, 5, 10) if m * mag >= raw)
+    return np.arange(np.ceil(zmin / step) * step, zmax, step)

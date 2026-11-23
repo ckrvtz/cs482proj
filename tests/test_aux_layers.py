@@ -300,3 +300,12 @@ def test_busiest_block():
     assert busiest_block(mask, 3) == (6, 2)
     with pytest.raises(ValueError):
         busiest_block(mask, 11)
+
+
+def test_contour_levels():
+    from desertification.viz import contour_levels
+
+    assert contour_levels(28.0, 31.0).size == 0  # Aral: 3 m relief is DEM noise
+    lv = contour_levels(1224.7, 1429.6)
+    assert lv[0] == 1250 and np.allclose(np.diff(lv), 50)
+    assert contour_levels(5, 5).size == 0

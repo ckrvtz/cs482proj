@@ -728,7 +728,7 @@ Fill in owners and due dates. Tick tasks as they finish (`[x]`, date, note). `[~
 | [ ] | M1-T04 | Instructor discussion | | | Deferred, non-blocking |
 | [x] | M1-T05 | Pilot extraction | | 2026-11-21 | Local run: b10 42.8 PU, c6 27.3 PU (projection accurate to ×1.02); no holes (valid count 19–35); reflectance within 0–1; harmonisation step ≤ 0.005. Dashboard (settled): 71 PU, 3 requests. Re-run made 0 API requests (cache confirmed by the owner). |
 | [x] | M1-T06 | Scaled extraction | | 2026-11-21 | **585/585 requests present, 0 failed** (3 runs: 60 + 60 + 465; each request downloaded once). Reported 14 662.7 PU (×0.76 of the 19 203 projection); ledger 14 688 PU (dashboard), within the 20 000 cap. Re-run with `RUN_EXTRACTION = True`: downloaded 0, cached 585, 0 API requests. Cache archived with `pack_data.py` and backed up off-machine by the owner |
-| [ ] | M1-T07 | Auxiliary data | | | |
+| [x] | M1-T07 | Auxiliary data | | 2026-11-23 | `notebooks/02b_aux_data.ipynb`: DEM GLO-30 (elevation/slope/aspect, 20 m) and WorldCover 2020/2021 (10 m, nested 2 × 2) on each extraction window's exact S2 grid; CHIRPS + ETo monthly 2019–2025 at 0.05° sampled per 100 m cell; per-cell study-period aridity. **24/24 layer×AOI grids register exactly** (`m1_aux_registration.csv`); overlays `m1_aux_overlay*.png`. Sandbox figures use a DEM-hillshade background (no composites in the sandbox): owner to re-run locally for the S2 background (open question 14). Finding: 2019–2025 aridity is below the 1991–2020 normal at Aral (0.069–0.085 vs 0.143) (`m1_aux_summary.csv`). No Sentinel Hub requests |
 | [ ] | M1-T08 | Parse to tables & initial exploration | | | |
 | [ ] | M1-T09 | Cleaning & preliminary stats | | | |
 | [ ] | M1-T10 | **Milestone 1 report** | | | |
@@ -776,6 +776,7 @@ Resolve these and record the answer in [`DECISIONS.md`](DECISIONS.md).
 11. *(Resolved 2026-11-21: final six AOIs confirmed by the project owner after re-checking the moved Urmia and Kubuqi squares; Decision log #41–#43.)*
 12. *(Resolved 2026-11-21: b10 seasonal composites + 20 m monthly series + low-cloud filter, 16-bit, on centred 10 km windows; ≈ 19 200 PU projected for 585 requests; Decision log #51.)*
 13. *(Resolved 2026-11-21: windows reviewed and the full extraction run; Decision log #54–#58.)*
+14. M1-T07 overlay on Sentinel-2 composites: re-run `02b_aux_data.ipynb` locally (cached composites become the background automatically; climate/DEM/WorldCover download in ~10 min, no quota) and confirm visually that WorldCover edges sit on the features in the imagery. *Owner, before M1-T08.*
 
 ---
 
